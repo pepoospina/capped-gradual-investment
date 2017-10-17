@@ -1,33 +1,48 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.4.12;
 
-contract OrderedListManager is OrderedListStructs, Owned {
+contract OrderedListManager {
 
-  OrderedList list;
+  struct ListElement {
+    uint extKey;
+    uint value;
+    uint next;
+    uint prev;
+  }
+
+  mapping (uint => ListElement) list;
+
+  /* key pointing to the first element of the list */
+  uint firstKey;
+
+  /* to the current key needed to create a new one */
+  uint currentKey;
+
+  /* constructor */
+  function OrderedListManager ()
+    public {
+  }
 
   /* support functions to manipulate the list */
-  function internal addElement(
+  function addElement(
     ListElement element,
     uint atKey,
     bool toTheRight)
+    private
   {
     /* the keys are a sequence, they also provides the length of the list
       WARING: keys dont provide the list order! */
-    uint newKey = list.currentKey + 1;
-    list.currentKey = newKey;
+    uint newKey = currentKey + 1;
+    currentKey = newKey;
 
     /* check if this is the first element ever in the list`*/
-    if (list.currentKey = 1) {
+    if (currentKey == 1) {
       /* the first element is the only element */
       firstKey = newKey;
       /* the element is added to the map */
-      list.map[newKey] = investment;
+      list[newKey] = element;
     } else {
-      /* check there is indeed an element at atKey */
-      InvestmentElement thisElement = list[atKey];
-      if (thisElement.offer.address == 0) throw;
-
       /* add the investment */
-      list.map[newKey].investment = investment;
+      list[newKey] = element;
 
       /* link with the rest of elements */
       if (toTheRight) {
@@ -35,14 +50,14 @@ contract OrderedListManager is OrderedListStructs, Owned {
         uint rightKey = list[atKey].next;
 
         /* update the links to the element at the left */
-        list.map[newKey].prev = atKey;
-        list.map[atKey].next = newKey;
+        list[newKey].prev = atKey;
+        list[atKey].next = newKey;
 
         /* update the linkts of the next element at tthe right
            only if it exist */
         if (rightKey > 0) {
-          list.map[newKey].next = rightKey;
-          list.map[rightKey].prev = newKey;
+          list[newKey].next = rightKey;
+          list[rightKey].prev = newKey;
         }
 
       } else {
@@ -50,126 +65,77 @@ contract OrderedListManager is OrderedListStructs, Owned {
         uint leftKey = list[atKey].prev;
 
         /* update the links to the element at the right */
-        list.map[newKey].next = atKey;
-        list.map[atKey].prev = newKey;
+        list[newKey].next = atKey;
+        list[atKey].prev = newKey;
 
         /* update the linkts of the next element at the left
            only if it exist */
         if (leftKey > 0) {
-          list.map[newKey].prev = leftKey;
-          list.map[leftKey].next = newKey;
+          list[newKey].prev = leftKey;
+          list[leftKey].next = newKey;
         } else {
           /* this element becomes the element at the top left of the list and is
            therefore the first element */
-          list.firstKey = newKey;
+          firstKey = newKey;
         }
       }
     }
   }
 
-  function public addElementOrdered(
-    Investment investment,
+  function addElementOrdered(
+    ListElement element,
     uint atKey)
+    public
   {
-    uint nextKey = list.map[atKey].next;
-    uint prevKey = list.map[atKey].prev;
+    uint nextKey = list[atKey].next;
+    uint prevKey = list[atKey].prev;
 
-    if (list.currentKey > 0) {
+    if (currentKey > 0) {
       if (atKey > 0) {
-        if (list.map[atKey].value < element.value) {
-          /* this element value is larger*/
-          if (nextKey) {
-            /* if there is an element to the right */
-            if (investment.multiplier_micro < list.map[nextKey].investment.multiplier_micro) {
-              /* new element should be placed at the right of atKey */
-              addElement(list, investment, atKey, true);
+
+        /* check if the new element value is larger than that of the element in which
+           it is requested to be inserted */
+        if (list[atKey].value < element.value) {
+          /* check if there is an element to the right */
+          if (nextKey > 0) {
+            /* check if new element value is larger than the element at the right */
+            if (element.value > list[nextKey].value) {
+              /* if so, keep looking to the right by calling this function again */
+              /*  WARNING: recursive, unpredictable and unbounded gas consumption */
+              addElementOrdered(element, nextKey);
               return;
-              } else {
-                /* keep looking to the right */
-                addElementOrdered(list, investment, nextKey);
-              }
-          } else {
-            addElement(list, investment, atKey, true);
+            }
           }
+
+          /* if not, you can safey add this element to the right */
+          addElement(element, atKey, true);
+          return;
+
         } else {
-          /* this investment multiplier is smaller */
-          if (prevKey) {
-            /* if there is an element to the left */
-            if (investment.multiplier_micro > list.map[prevKey].investment.multiplier_micro) {
-              /* new element should be placed at the left of atKey */
-              addElement(list, investment, atKey, false);
-              return;
-              } else {
-                /* keep looking to the left */
-                addElementOrdered(list, investment, prevKey);
-              }
-          } else {
-            addElement(list, investment, atKey, true);
+          /* the new element value is actually smaller */
+
+          /* check if there is an element to the left */
+          if (prevKey > 0) {
+            /* check if new element value is lower than the element at the left */
+            if (element.value < list[prevKey].value) {
+              /* if so, keep looking to the left by calling this function again */
+              addElementOrdered(element, prevKey);
+            }
           }
+
+          /* if not, you can safey add this element to the left */
+          addElement(element, atKey, false);
+          return;
         }
       } else {
         /* no atKey provided, start from the beginning
-          WARNING: unpredicatble and unbounded gas consumption */
-        addElementOrdered(list, investment, list.fistKey);
+          WARNING: recursive, unpredictable and unbounded gas consumption */
+        addElementOrdered(element, firstKey);
       }
     } else {
       /* first element */
-      addElement(investment, 0, true);
+      addElement(element, 0, true);
     }
   }
 
-  function CappedInvestmentFund () {
-
-  }
-
-  function invest(uint multiplier_micro, uint atKey)
-    payable
-    returns(bool success)
-  {
-
-    /* prepare investment offer element */
-    Investment memory newInvestment;
-
-    newInvestment.investor = msg.sender;
-    newInvestment.amount = msg.value;
-    newInvestment.multiplier_micro = multiplier_micro;
-
-    addElementOrdered(investmentOffers, newInvestment, atKey);
-  }
-
-  function spend (uint amount, bytes32 motiveHash) {
-    /* start consuming from the offers and create the corresponding investments */
-    uint spent;
-    uint missing;
-    uint nextOffer = lowestOfferId;
-
-    while (spent < amount) {
-      missing = amount - spent;
-      uint availableHere = investmentOffers[nextOffer].amount - investmentOffers[nextOffer].fundsUsed;
-
-      /* this offer is enough to fund the missing spenditure */
-      investment.investor = investmentOffers[nextOffer].investor;
-      investmentOffers[nextOffer].fundsUsed += missing;
-
-      investment.amount = missing;
-
-    }
-
-  }
-
-  function payback() {
-    if (owner != msg.sender) throw;
-
-    uint revenue = this.balance - totalInvested;
-
-    /* if there is enough revenue to distribute */
-    if (revenue > 0) {
-
-      /* go over all the investmen */
-      uint ix = 0;
-      while (ix < investmentWell.length) {
-
-      }
-    }
-  }
 }

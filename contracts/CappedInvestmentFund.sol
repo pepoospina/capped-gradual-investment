@@ -1,4 +1,4 @@
-pragma solidity ^0.4.12;
+pragma solidity ^0.4.8;
 
 import "./OrderedListManager.sol";
 
@@ -16,11 +16,11 @@ contract CappedInvestmentFund {
      the indexes of the array in order based on the multiplier */
 
   Investment[] investmentOffers;
-  OrderedListManager investmentOffersOrder;
+
+  using OrderedListManager for OrderedListManager.OrderedList;
+  OrderedListManager.OrderedList investmentOffersOrder;
 
   function CappedInvestmentFund () {
-    /* deploy the OrderedListManager contract */
-    investmentOffersOrder = new OrderedListManager();
   }
 
   /**
@@ -43,7 +43,7 @@ contract CappedInvestmentFund {
     investmentOffers.push(newInvestment);
     uint ix = investmentOffers.length;
 
-    ListElement memory listElement;
+    OrderedListManager.ListElement memory listElement;
     listElement.extKey = ix;
     listElement.value = multiplier_micro;
 

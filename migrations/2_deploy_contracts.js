@@ -1,8 +1,8 @@
-var ConvertLib = artifacts.require("./ConvertLib.sol");
-var MetaCoin = artifacts.require("./MetaCoin.sol");
+var OrderedListManager = artifacts.require("./OrderedListManager.sol");
+var CappedInvestmentFund = artifacts.require("./CappedInvestmentFund.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(ConvertLib);
-  deployer.link(ConvertLib, MetaCoin);
-  deployer.deploy(MetaCoin);
+  deployer.deploy(OrderedListManager);
+  deployer.link(OrderedListManager, CappedInvestmentFund);
+  deployer.deploy(CappedInvestmentFund);
 };

@@ -18,9 +18,10 @@ library OrderedListManager {
   /* support functions to manipulate the list */
   function addElement(
     OrderedList storage self,
-    ListElement storage element,
+    ListElement element,
     uint atKey,
     bool toTheRight)
+    internal
   {
     /* the keys are a sequence, they also provides the length of the list
       WARING: keys dont provide the list order! */
@@ -77,8 +78,9 @@ library OrderedListManager {
 
   function addElementOrdered(
     OrderedList storage self,
-    ListElement storage element,
+    ListElement element,
     uint atKey)
+    internal
   {
     uint nextKey = self.list[atKey].next;
     uint prevKey = self.list[atKey].prev;

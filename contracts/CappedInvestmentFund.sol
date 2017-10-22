@@ -15,10 +15,10 @@ contract CappedInvestmentFund {
   /* the array holds the investments, while the OrderedListManager holds
      the indexes of the array in order based on the multiplier */
 
-  Investment[] investmentOffers;
+  Investment[] public investmentOffers;
 
   using OrderedListManager for OrderedListManager.OrderedList;
-  OrderedListManager.OrderedList investmentOffersOrder;
+  OrderedListManager.OrderedList public investmentOffersOrder;
 
   function CappedInvestmentFund () {
   }
@@ -31,7 +31,7 @@ contract CappedInvestmentFund {
   **/
   function invest(uint multiplier_micro, uint atKey)
     payable
-    returns(bool success)
+    returns(bool success, uint ix)
   {
     /* prepare investment offer element */
     Investment memory newInvestment;
@@ -41,7 +41,7 @@ contract CappedInvestmentFund {
     newInvestment.multiplier_micro = multiplier_micro;
 
     investmentOffers.push(newInvestment);
-    uint ix = investmentOffers.length;
+    ix = investmentOffers.length;
 
     OrderedListManager.ListElement memory listElement;
     listElement.extKey = ix;

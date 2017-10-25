@@ -90,11 +90,11 @@ library OrderedListManager {
 
         /* check if the new element value is larger than that of the element in which
            it is requested to be inserted */
-        if (self.list[atKey].value < element.value) {
+        if (self.list[atKey].value <= element.value) {
           /* check if there is an element to the right */
           if (nextKey > 0) {
             /* check if new element value is larger than the element at the right */
-            if (element.value > self.list[nextKey].value) {
+            if (element.value >= self.list[nextKey].value) {
               /* if so, keep looking to the right by calling this function again */
               /*  WARNING: recursive, unpredictable and unbounded gas consumption */
               addElementOrdered(self, element, nextKey);

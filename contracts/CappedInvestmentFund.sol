@@ -23,6 +23,16 @@ contract CappedInvestmentFund {
   function CappedInvestmentFund () {
   }
 
+  function getInvestmentOffersOrder (uint key)
+    public
+    constant
+    returns (uint extKey, uint value, uint prev, uint next) {
+        return (investmentOffersOrder.list[key].extKey,
+                investmentOffersOrder.list[key].value,
+                investmentOffersOrder.list[key].prev,
+                investmentOffersOrder.list[key].next);
+  }
+
   /**
   *  atKey: The key of the element in investmentOffersOrder at which the input investment
   *  cab be added safely to the right without breaking the list order.
@@ -44,7 +54,7 @@ contract CappedInvestmentFund {
     ix = investmentOffers.length;
 
     OrderedListManager.ListElement memory listElement;
-    listElement.extKey = ix;
+    listElement.extKey = ix - 1;
     listElement.value = multiplier_micro;
 
     investmentOffersOrder.addElementOrdered(listElement, atKey);

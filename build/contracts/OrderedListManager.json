@@ -1,7 +1,7 @@
 {
   "contract_name": "OrderedListManager",
   "abi": [],
-  "unlinked_binary": "0x6060604052346000575b60358060166000396000f30060606040525b60005600a165627a7a7230582099edb2e71f32892e8d771a80ed33d2ba370e2908cf163a7d25dee554944672490029",
+  "unlinked_binary": "0x6060604052346000575b60358060166000396000f30060606040525b60005600a165627a7a723058206f9d806fd850d5c91daec90004c40f515f4e3439b52cb42c2cb6cb2acb501d5b0029",
   "networks": {
     "1508693083151": {
       "events": {},
@@ -14,8 +14,14 @@
       "links": {},
       "address": "0x45e47cfc667a98bb735f2b7cab8c3cb5c7bc7f97",
       "updated_at": 1508928820153
+    },
+    "1508947162596": {
+      "events": {},
+      "links": {},
+      "address": "0xe81c29710e452d963fa9651f4be10c07d5cc87c4",
+      "updated_at": 1508947175647
     }
   },
   "schema_version": "0.0.5",
-  "updated_at": 1508928820153
+  "updated_at": 1508947175647
 }

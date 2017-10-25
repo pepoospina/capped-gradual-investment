@@ -24,12 +24,12 @@ contract CappedInvestmentFund {
   }
 
   /* These two methods can be used to read the entire ordered list of investments */
-  function getLowestInvestmentOffer ()
+  function getLowestInvestmentOfferKey ()
     public
     constant
     returns (uint nextKey)
   {
-    return investmentOffersOrder.getFirstElementExtKey();
+    return investmentOffersOrder.firstKey;
   }
 
   function getInvestmentOfferAtKey (uint key)

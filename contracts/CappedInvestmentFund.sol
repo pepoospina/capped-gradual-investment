@@ -23,15 +23,41 @@ contract CappedInvestmentFund {
   function CappedInvestmentFund () {
   }
 
-  function getInvestmentOffersOrder (uint key)
+  /* These two methods can be used to read the entire ordered list of investments */
+  function getLowestInvestmentOffer ()
     public
     constant
-    returns (uint extKey, uint value, uint prev, uint next) {
+    returns (uint nextKey)
+  {
+    return investmentOffersOrder.getFirstElementExtKey();
+  }
+
+  function getInvestmentOfferAtKey (uint key)
+    public
+    constant
+    returns (address investor, uint amount, uint multiplier_micro, uint nextKey)
+  {
+      OrderedListManager.ListElement memory element = investmentOffersOrder.getElementAtKey(key);
+      Investment investment = investmentOffers[element.extKey];
+
+      return (investment.investor,
+              investment.amount,
+              investment.multiplier_micro,
+              element.next);
+  }
+
+  /* for debug mainly */
+  function getInvestmentOffersOrderAtKey (uint key)
+    public
+    constant
+    returns (uint extKey, uint value, uint prev, uint next)
+  {
         return (investmentOffersOrder.list[key].extKey,
                 investmentOffersOrder.list[key].value,
                 investmentOffersOrder.list[key].prev,
                 investmentOffersOrder.list[key].next);
   }
+
 
   /**
   *  atKey: The key of the element in investmentOffersOrder at which the input investment

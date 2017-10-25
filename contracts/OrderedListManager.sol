@@ -133,4 +133,20 @@ library OrderedListManager {
     }
   }
 
+  function getFirstElementExtKey (OrderedList storage self)
+    internal
+    constant
+    returns (uint extKey)
+  {
+    return self.list[self.firstKey].extKey;
+  }
+
+  function getElementAtKey (OrderedList storage self, uint key)
+    internal
+    constant
+    returns (ListElement element)
+  {
+    return self.list[key];
+  }
+
 }

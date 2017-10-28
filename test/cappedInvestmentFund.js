@@ -2,9 +2,10 @@ var CappedInvestmentFund = artifacts.require("./CappedInvestmentFund.sol");
 
 contract('CappedInvestmentFund', function(accounts) {
 
-  it ("should add a first investment to the list", function() {
+  var investmentFund;
 
-    var investmentFund;
+  it ("should add a investment in order", function() {
+
     var orderedInvestments = [];
 
     return CappedInvestmentFund.deployed().then(
@@ -85,4 +86,12 @@ contract('CappedInvestmentFund', function(accounts) {
 
   });
 
+  it ("should spend investments in order", function() {
+    return investmentFund.spend(web3.toWei(1.1), { from: accounts[0] }).then(
+
+    function (txn) {
+      console.log(txn)
+    });
+
+  });
 });

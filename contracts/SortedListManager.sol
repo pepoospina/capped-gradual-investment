@@ -1,6 +1,6 @@
 pragma solidity ^0.4.8;
 
-library OrderedListManager {
+library SortedListManager {
 
   struct ListElement {
     uint extKey;

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.8;
 
 import "./Ownable.sol";
-import "./OrderedListManager.sol";
+import "./SortedListManager.sol";
 
 contract CappedInvestmentFund is Ownable {
 
@@ -18,10 +18,10 @@ contract CappedInvestmentFund is Ownable {
 
   Investment[] public investmentOffers;
 
-  using OrderedListManager for OrderedListManager.OrderedList;
+  using SortedListManager for SortedListManager.SortedList;
 
-  OrderedListManager.OrderedList public investmentOffersOrder;
-  OrderedListManager.OrderedList public investmentsUsedOrder;
+  SortedListManager.SortedList public investmentOffersOrder;
+  SortedListManager.SortedList public investmentsUsedOrder;
 
   function CappedInvestmentFund () {
   }
@@ -38,7 +38,7 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentOfferAtKey (uint key)
     private
   {
-    OrderedListManager.ListElement memory element = investmentOffersOrder.get(key);
+    SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
     return investmentOffers[element.extKey];
   }
 
@@ -88,7 +88,7 @@ contract CappedInvestmentFund is Ownable {
     investmentOffers.push(newInvestment);
     ix = investmentOffers.length;
 
-    OrderedListManager.ListElement memory listElement;
+    SortedListManager.ListElement memory listElement;
     listElement.extKey = ix - 1;
     listElement.value = multiplier_micro;
 
@@ -107,7 +107,7 @@ contract CappedInvestmentFund is Ownable {
     uint stillToSpend = totalToSpend - spent;
     uint currentKey = getLowestInvestmentOfferKey();
 
-    OrderedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
+    SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
 
     Investment memory investment = investmentOffers[ix];

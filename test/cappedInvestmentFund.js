@@ -36,7 +36,7 @@ contract('CappedInvestmentFund', function(accounts) {
     function(key) {
 
       const getOfferAtKey = function (thisKey) {
-        return investmentFund.getInvestmentOfferAtKey.call(thisKey).then(
+        return investmentFund.getInvestmentOfferDataAtKey.call(thisKey).then(
           function (res) {
 
             orderedInvestments.push({

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.8;
 
 
 /**
@@ -23,7 +23,7 @@ contract Ownable {
    * @dev Throws if called by any account other than the owner.
    */
   modifier onlyOwner() {
-    require(msg.sender == owner);
+    if (msg.sender != owner) throw;
     _;
   }
 
@@ -32,7 +32,7 @@ contract Ownable {
    * @param newOwner The address to transfer ownership to.
    */
   function transferOwnership(address newOwner) onlyOwner public {
-    require(newOwner != address(0));
+    if(newOwner == address(0)) throw;
     OwnershipTransferred(owner, newOwner);
     owner = newOwner;
   }

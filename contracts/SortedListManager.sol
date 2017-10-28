@@ -21,7 +21,7 @@ library SortedListManager {
 
   /* adds element at the end of the list */
   function push (
-    OrderedList storage self,
+    SortedList storage self,
     ListElement element)
     internal
   {
@@ -29,10 +29,10 @@ library SortedListManager {
   }
 
   function popFirst (
-    OrderedList storage self)
+    SortedList storage self)
     internal
   {
-    if (size > 0) {
+    if (self.size > 0) {
       /* set next as new first */
       uint next = self.list[self.firstKey].next;
       if (next > 0) {
@@ -40,13 +40,13 @@ library SortedListManager {
         self.firstKey = next;
       }
 
-      size--;
+      self.size--;
     }
   }
 
   /* adds element in any place of the list */
   function add(
-    OrderedList storage self,
+    SortedList storage self,
     ListElement element,
     uint atKey,
     bool toTheRight)
@@ -65,12 +65,12 @@ library SortedListManager {
 
       /* the element is added to the map */
       self.list[newKey] = element;
-      size++;
+      self.size++;
 
     } else {
       /* add the investment */
       self.list[newKey] = element;
-      size++;
+      self.size++;
 
       /* link with the rest of elements */
       if (toTheRight) {
@@ -115,7 +115,7 @@ library SortedListManager {
 
   /* adds element in the corresponing sorted position */
   function addSorted(
-    OrderedList storage self,
+    SortedList storage self,
     ListElement element,
     uint atKey)
     internal
@@ -157,7 +157,7 @@ library SortedListManager {
           }
 
           /* if not, you can safey add this element to the left */
-          addElement(self, element, atKey, false);
+          add(self, element, atKey, false);
           return;
         }
       } else {
@@ -171,7 +171,7 @@ library SortedListManager {
     }
   }
 
-  function getFirstExtKey (OrderedList storage self)
+  function getFirstExtKey (SortedList storage self)
     internal
     constant
     returns (uint extKey)
@@ -179,15 +179,15 @@ library SortedListManager {
     return self.list[self.firstKey].extKey;
   }
 
-  function getFirst (OrderedList storage self)
+  function getFirst (SortedList storage self)
     internal
     constant
     returns (ListElement element)
   {
-    return get(getFirstExtKey());
+    return get(self, getFirstExtKey(self));
   }
 
-  function get (OrderedList storage self, uint key)
+  function get (SortedList storage self, uint key)
     internal
     constant
     returns (ListElement element)

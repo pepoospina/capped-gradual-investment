@@ -37,6 +37,7 @@ contract CappedInvestmentFund is Ownable {
 
   function getInvestmentOfferAtKey (uint key)
     private
+    returns (Investment investment)
   {
     SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
     return investmentOffers[element.extKey];
@@ -47,7 +48,8 @@ contract CappedInvestmentFund is Ownable {
     constant
     returns (address investor, uint amount, uint multiplier_micro, uint nextKey)
   {
-    Investment investment = getInvestmentOfferAtKey(key)
+    SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
+    Investment memory investment = investmentOffers[element.extKey];
 
     return (investment.investor,
             investment.amount,
@@ -76,7 +78,7 @@ contract CappedInvestmentFund is Ownable {
   **/
   function invest(uint multiplier_micro, uint atKey)
     payable
-    returns(bool success, uint ix)
+    returns(uint ix)
   {
     /* prepare investment offer element */
     Investment memory newInvestment;
@@ -102,10 +104,9 @@ contract CappedInvestmentFund is Ownable {
     public
     onlyOwner
   {
-    uint totalToSpend = msg.value;
+    uint totalToSpend = amount;
     uint spent = 0;
     uint stillToSpend = totalToSpend - spent;
-    uint currentKey = getLowestInvestmentOfferKey();
 
     SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
@@ -127,10 +128,11 @@ contract CappedInvestmentFund is Ownable {
       }
 
       /* add the investment to the investmentsUsedOrder list if not already added */
-      if (investmentOffersOrder.getFirst(1).extKey != ix) {
+      if (investmentOffersOrder.getFirst().extKey != ix) {
         /* not yet added */
+        SortedListManager.ListElement memory listElement;
         listElement.extKey = ix - 1;
-        listElement.value = multiplier_micro;
+        listElement.value = investment.multiplier_micro;
         investmentOffersOrder.push(listElement);
       }
 

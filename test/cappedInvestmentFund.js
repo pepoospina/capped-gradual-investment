@@ -47,9 +47,12 @@ contract('CappedInvestmentFund', function(accounts) {
 
             var nextKey = res[3];
             if (nextKey != 0) {
+              /* recursive call filling orderedInvestments
+              until the end of the list */
               getOfferAtKey(nextKey);
+
             } else {
-              /* at this point all the list has been run in order*/
+              /* at this point all the list has been run in order */
 
               /* check the order is correct */
               assert.equal(orderedInvestments[0].investor, accounts[2], "investment address wrong");
@@ -71,7 +74,6 @@ contract('CappedInvestmentFund', function(accounts) {
               assert.equal(orderedInvestments[4].investor, accounts[4], "investment address wrong");
               assert.equal(orderedInvestments[4].amount, web3.toWei(1.5, 'ether'), "investment amount wrong");
               assert.equal(orderedInvestments[4].multiplier_micro, 1300000, "investment multiplier wrong");
-
 
             }
           }

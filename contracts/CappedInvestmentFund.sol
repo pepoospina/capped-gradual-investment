@@ -1,8 +1,9 @@
 pragma solidity ^0.4.8;
 
+import "./Ownable.sol";
 import "./OrderedListManager.sol";
 
-contract CappedInvestmentFund {
+contract CappedInvestmentFund is Ownable {
 
   struct Investment {
     address investor;
@@ -18,7 +19,9 @@ contract CappedInvestmentFund {
   Investment[] public investmentOffers;
 
   using OrderedListManager for OrderedListManager.OrderedList;
+
   OrderedListManager.OrderedList public investmentOffersOrder;
+  OrderedListManager.OrderedList public investmentsUsedOrder;
 
   function CappedInvestmentFund () {
   }
@@ -33,17 +36,23 @@ contract CappedInvestmentFund {
   }
 
   function getInvestmentOfferAtKey (uint key)
+    private
+  {
+    OrderedListManager.ListElement memory element = investmentOffersOrder.get(key);
+    return investmentOffers[element.extKey];
+  }
+
+  function getInvestmentOfferDataAtKey (uint key)
     public
     constant
     returns (address investor, uint amount, uint multiplier_micro, uint nextKey)
   {
-      OrderedListManager.ListElement memory element = investmentOffersOrder.getElementAtKey(key);
-      Investment investment = investmentOffers[element.extKey];
+    Investment investment = getInvestmentOfferAtKey(key)
 
-      return (investment.investor,
-              investment.amount,
-              investment.multiplier_micro,
-              element.next);
+    return (investment.investor,
+            investment.amount,
+            investment.multiplier_micro,
+            element.next);
   }
 
   /* for debug mainly */
@@ -83,11 +92,56 @@ contract CappedInvestmentFund {
     listElement.extKey = ix - 1;
     listElement.value = multiplier_micro;
 
-    investmentOffersOrder.addElementOrdered(listElement, atKey);
+    investmentOffersOrder.addSorted(listElement, atKey);
   }
 
-  function spend (uint amount) {
-    /* start consuming from the offers and create the corresponding investments */
+  /* start consuming from the offers and add the used investments to the investmentsUsedOrder list.
+  * If an offer is not fully used, it will remain both in the investmentOffersOrder list and in the
+  * investmentsUsedOrder list */
+  function spend (uint amount)
+    public
+    onlyOwner
+  {
+    uint totalToSpend = msg.value;
+    uint spent = 0;
+    uint stillToSpend = totalToSpend - spent;
+    uint currentKey = getLowestInvestmentOfferKey();
+
+    OrderedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
+    uint ix = elementInOffers.extKey;
+
+    Investment memory investment = investmentOffers[ix];
+
+    while (stillToSpend > 0) {
+
+      uint available = investment.amount - investment.used;
+
+      if (available > stillToSpend) {
+        /* if there is more available than needed */
+        investment.used += stillToSpend;
+        stillToSpend = 0;
+      } else {
+        /* if there is less or equal available than needed */
+        investment.used += available;
+        stillToSpend -= available;
+      }
+
+      /* add the investment to the investmentsUsedOrder list if not already added */
+      if (investmentOffersOrder.getFirst(1).extKey != ix) {
+        /* not yet added */
+        listElement.extKey = ix - 1;
+        listElement.value = multiplier_micro;
+        investmentOffersOrder.push(listElement);
+      }
+
+      if (investment.used >= investment.amount) {
+        /* TODO: Actually it should only be ==, but... i am scared that
+        the whole process breaks for a minor overshoot... */
+
+        /* remove the element from the offer list because it has been fully used */
+        investmentOffersOrder.popFirst();
+      }
+    }
   }
 
   function payback() {

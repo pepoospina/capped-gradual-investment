@@ -9,14 +9,43 @@ library OrderedListManager {
     uint prev;
   }
 
-  struct OrderedList {
+  struct SortedList {
     mapping (uint => ListElement) list;
     uint firstKey;
+    uint lastKey;
     uint currentKey;
+    uint size;
   }
 
   /* support functions to manipulate the list */
-  function addElement(
+
+  /* adds element at the end of the list */
+  function push (
+    OrderedList storage self,
+    ListElement element)
+    internal
+  {
+    add(self, element, self.lastKey, true);
+  }
+
+  function popFirst (
+    OrderedList storage self)
+    internal
+  {
+    if (size > 0) {
+      /* set next as new first */
+      uint next = self.list[self.firstKey].next;
+      if (next > 0) {
+        self.list[next].prev = 0;
+        self.firstKey = next;
+      }
+
+      size--;
+    }
+  }
+
+  /* adds element in any place of the list */
+  function add(
     OrderedList storage self,
     ListElement element,
     uint atKey,
@@ -29,14 +58,19 @@ library OrderedListManager {
     self.currentKey = newKey;
 
     /* check if this is the first element ever in the list`*/
-    if (self.currentKey == 1) {
+    if (self.size == 0) {
       /* the first element is the only element */
       self.firstKey = newKey;
+      self.lastKey = newKey;
+
       /* the element is added to the map */
       self.list[newKey] = element;
+      size++;
+
     } else {
       /* add the investment */
       self.list[newKey] = element;
+      size++;
 
       /* link with the rest of elements */
       if (toTheRight) {
@@ -47,15 +81,18 @@ library OrderedListManager {
         self.list[newKey].prev = atKey;
         self.list[atKey].next = newKey;
 
-        /* update the linkts of the next element at tthe right
+        /* update the links of the next element at the right
            only if it exist */
         if (rightKey > 0) {
           self.list[newKey].next = rightKey;
           self.list[rightKey].prev = newKey;
+        } else {
+          /* this is the last element */
+          self.lastKey = newKey;
         }
 
       } else {
-        /* add the new element to the right of the atKey element */
+        /* add the new element to the left of the atKey element */
         uint leftKey = self.list[atKey].prev;
 
         /* update the links to the element at the right */
@@ -76,7 +113,8 @@ library OrderedListManager {
     }
   }
 
-  function addElementOrdered(
+  /* adds element in the corresponing sorted position */
+  function addSorted(
     OrderedList storage self,
     ListElement element,
     uint atKey)
@@ -97,13 +135,13 @@ library OrderedListManager {
             if (element.value >= self.list[nextKey].value) {
               /* if so, keep looking to the right by calling this function again */
               /*  WARNING: recursive, unpredictable and unbounded gas consumption */
-              addElementOrdered(self, element, nextKey);
+              addSorted(self, element, nextKey);
               return;
             }
           }
 
           /* if not, you can safey add this element to the right */
-          addElement(self, element, atKey, true);
+          add(self, element, atKey, true);
           return;
 
         } else {
@@ -114,7 +152,7 @@ library OrderedListManager {
             /* check if new element value is lower than the element at the left */
             if (element.value < self.list[prevKey].value) {
               /* if so, keep looking to the left by calling this function again */
-              addElementOrdered(self, element, prevKey);
+              addSorted(self, element, prevKey);
             }
           }
 
@@ -125,15 +163,15 @@ library OrderedListManager {
       } else {
         /* no atKey provided, start from the beginning
           WARNING: recursive, unpredictable and unbounded gas consumption */
-        addElementOrdered(self, element, self.firstKey);
+        addSorted(self, element, self.firstKey);
       }
     } else {
       /* first element */
-      addElement(self, element, 0, true);
+      add(self, element, 0, true);
     }
   }
 
-  function getFirstElementExtKey (OrderedList storage self)
+  function getFirstExtKey (OrderedList storage self)
     internal
     constant
     returns (uint extKey)
@@ -141,7 +179,15 @@ library OrderedListManager {
     return self.list[self.firstKey].extKey;
   }
 
-  function getElementAtKey (OrderedList storage self, uint key)
+  function getFirst (OrderedList storage self)
+    internal
+    constant
+    returns (ListElement element)
+  {
+    return get(getFirstExtKey());
+  }
+
+  function get (OrderedList storage self, uint key)
     internal
     constant
     returns (ListElement element)

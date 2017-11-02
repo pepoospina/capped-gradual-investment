@@ -16,7 +16,7 @@ contract CappedInvestmentFund is Ownable {
   /* the array holds the investments, while the OrderedListManager holds
      the indexes of the array in order based on the multiplier */
 
-  Investment[] public investmentOffers;
+  Investment[] public investments;
 
   using SortedListManager for SortedListManager.SortedList;
 
@@ -30,9 +30,17 @@ contract CappedInvestmentFund is Ownable {
   function getLowestInvestmentOfferKey ()
     public
     constant
-    returns (uint nextKey)
+    returns (uint key)
   {
     return investmentOffersOrder.firstKey;
+  }
+
+  function getLowestInvestmentUsedKey ()
+    public
+    constant
+    returns (uint key)
+  {
+    return investmentsUsedOrder.firstKey;
   }
 
   function getInvestmentOfferAtKey (uint key)
@@ -40,21 +48,60 @@ contract CappedInvestmentFund is Ownable {
     returns (Investment investment)
   {
     SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
-    return investmentOffers[element.extKey];
+    return investments[element.extKey];
+  }
+
+  function getInvestmentUsedAtKey (uint key)
+    private
+    returns (Investment investment)
+  {
+    SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
+    return investments[element.extKey];
   }
 
   function getInvestmentOfferDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKey)
   {
-    SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
-    Investment memory investment = investmentOffers[element.extKey];
+    if (key > 0) {
+      SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
+      (investor, amount, multiplier_micro, used, paid, nextKey) =
+        getInvestmentDataAtIx(element.extKey, element.next);
+      return;
+    } else {
+      return (0, 0, 0, 0, 0, 0);
+    }
+  }
+
+  function getInvestmentUsedDataAtKey (uint key)
+    public
+    constant
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKey)
+  {
+    if (key > 0) {
+      SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
+      (investor, amount, multiplier_micro, used, paid, nextKey) =
+        getInvestmentDataAtIx(element.extKey, element.next);
+      return;
+    } else {
+      return (0, 0, 0, 0, 0, 0);
+    }
+  }
+
+  function getInvestmentDataAtIx (uint ix, uint nextKey)
+    public
+    constant
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKeyOut)
+  {
+    Investment memory investment = investments[ix];
 
     return (investment.investor,
             investment.amount,
             investment.multiplier_micro,
-            element.next);
+            investment.used,
+            investment.paid,
+            nextKey);
   }
 
   /* for debug mainly */
@@ -67,6 +114,17 @@ contract CappedInvestmentFund is Ownable {
                 investmentOffersOrder.list[key].value,
                 investmentOffersOrder.list[key].prev,
                 investmentOffersOrder.list[key].next);
+  }
+
+  function getInvestmentsUsedOrderAtKey (uint key)
+    public
+    constant
+    returns (uint extKey, uint value, uint prev, uint next)
+  {
+        return (investmentsUsedOrder.list[key].extKey,
+                investmentsUsedOrder.list[key].value,
+                investmentsUsedOrder.list[key].prev,
+                investmentsUsedOrder.list[key].next);
   }
 
 
@@ -87,8 +145,8 @@ contract CappedInvestmentFund is Ownable {
     newInvestment.amount = msg.value;
     newInvestment.multiplier_micro = multiplier_micro;
 
-    investmentOffers.push(newInvestment);
-    ix = investmentOffers.length;
+    investments.push(newInvestment);
+    ix = investments.length;
 
     SortedListManager.ListElement memory listElement;
     listElement.extKey = ix - 1;
@@ -111,7 +169,7 @@ contract CappedInvestmentFund is Ownable {
     SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
 
-    Investment memory investment = investmentOffers[ix];
+    Investment storage investment = investments[ix];
 
     while (stillToSpend > 0) {
 
@@ -128,12 +186,12 @@ contract CappedInvestmentFund is Ownable {
       }
 
       /* add the investment to the investmentsUsedOrder list if not already added */
-      if (investmentOffersOrder.getFirst().extKey != ix) {
+      if (investmentsUsedOrder.getLast().extKey != ix) {
         /* not yet added */
         SortedListManager.ListElement memory listElement;
-        listElement.extKey = ix - 1;
+        listElement.extKey = ix;
         listElement.value = investment.multiplier_micro;
-        investmentOffersOrder.push(listElement);
+        investmentsUsedOrder.push(listElement);
       }
 
       if (investment.used >= investment.amount) {

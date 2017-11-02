@@ -171,20 +171,20 @@ library SortedListManager {
     }
   }
 
-  function getFirstExtKey (SortedList storage self)
-    internal
-    constant
-    returns (uint extKey)
-  {
-    return self.list[self.firstKey].extKey;
-  }
-
   function getFirst (SortedList storage self)
     internal
     constant
     returns (ListElement element)
   {
-    return get(self, getFirstExtKey(self));
+    return get(self, self.firstKey);
+  }
+
+  function getLast (SortedList storage self)
+    internal
+    constant
+    returns (ListElement element)
+  {
+    return get(self, self.lastKey);
   }
 
   function get (SortedList storage self, uint key)

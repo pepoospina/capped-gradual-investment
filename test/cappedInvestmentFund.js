@@ -106,6 +106,21 @@ contract('CappedInvestmentFund', function(accounts) {
         multiplier_micro: 1300000,
         amount_eth: 1.5
       } ];
+    var investmentsSorted = [];
+
+    var investments2 = [
+      {
+        investor: accounts[5],
+        multiplier_micro: 1100000,
+        amount_eth: 1.6
+      },
+      {
+        investor: accounts[6],
+        multiplier_micro: 1250000,
+        amount_eth: 1.7
+      }];
+    var remainingOffers = [];
+    var totalAvailable = 0;
 
     return CappedInvestmentFund.deployed()
     .then(
@@ -125,7 +140,7 @@ contract('CappedInvestmentFund', function(accounts) {
       /* check the order is correct */
       // console.log(sortedOffers);
 
-      var investmentsSorted = JSON.parse(JSON.stringify(investments));
+      investmentsSorted = JSON.parse(JSON.stringify(investments));
       investmentsSorted.sort(compareInvestments);
 
       assert.equal(sortedOffers.length, investmentsSorted.length, "investment number wrong");
@@ -137,7 +152,8 @@ contract('CappedInvestmentFund', function(accounts) {
         assert.equal(offer.amount, web3.toWei(investmentsSorted[ix].amount_eth, "ether"), "investment amount wrong");
       }
 
-      return investmentFund.spend(web3.toWei(1.1), { from: accounts[0] });
+      /* spend 80% of the first investment */
+      return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
 
     }).then(
 
@@ -147,10 +163,10 @@ contract('CappedInvestmentFund', function(accounts) {
 
     function(usedOffers) {
       // console.dir(usedOffers)
-      assert.equal(usedOffers[0].used, web3.toWei(1.1, 'ether'), "didn't used partially one offer");
+      assert.equal(usedOffers[0].used, web3.toWei(investmentsSorted[0].amount_eth*0.8, 'ether'), "didn't used partially one offer");
 
-      /* spend more */
-      return investmentFund.spend(web3.toWei(0.5), { from: accounts[0] });
+      /* spend another 80% of the first investment */
+      return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
     }).then(
 
     function(txn) {
@@ -161,22 +177,106 @@ contract('CappedInvestmentFund', function(accounts) {
     function(usedOffers) {
       // console.dir(usedOffers)
 
-      assert.equal(usedOffers[0].used, web3.toWei(1.3, 'ether'), "error using offer");
-      assert.equal(usedOffers[1].used, web3.toWei(0.3, 'ether'), "error using offer");
+      /* first investment fully used - the 20% missing */
+      assert.equal(usedOffers[0].used, web3.toWei(investmentsSorted[0].amount_eth, 'ether'), "error using offer");
+      /* second investment used for what was missing - 60% to reach 80% */
+      assert.equal(usedOffers[1].used, web3.toWei(investmentsSorted[0].amount_eth*0.6, 'ether'), "error using offer");
 
-      /* spend more */
-      return investmentFund.spend(web3.toWei(0.9), { from: accounts[0] });
+      return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
+    }).then(
+
+    function (sortedOffers) {
+
+      // console.dir(sortedOffers);
+      /* check the first offer was deleted from the offer list */
+      // TODO: bug warning, if investor is the same for the two first investments this test might give a false positive.
+      assert.equal(sortedOffers.length, investmentsSorted.length - 1, "too many elements");
+      assert.notEqual(sortedOffers[0].investor, investmentsSorted[0].investor, "investment not removed from offers");
+
+      /* spend two investments in a row */
+      var remaining = investmentsSorted[1].amount_eth - investmentsSorted[0].amount_eth*0.6
+      /* spend all what remains from second investments + all third investment + 0.1 eth if the forth investment */
+      var spendNow = remaining + investmentsSorted[2].amount_eth + 0.1;
+      return investmentFund.spend(web3.toWei(spendNow), { from: accounts[0] });
+
+    }).then (
+
+    function(txn) {
+      // console.log('spent again')
+      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+    }).then(
+
+    function(usedOffers) {
+      // console.dir(usedOffers)
+
+      assert.equal(usedOffers[0].used, web3.toWei(investmentsSorted[0].amount_eth, 'ether'), "error using offer");
+      assert.equal(usedOffers[1].used, web3.toWei(investmentsSorted[1].amount_eth, 'ether'), "error using offer");
+      assert.equal(usedOffers[2].used, web3.toWei(investmentsSorted[2].amount_eth, 'ether'), "error using offer");
+      assert.equal(usedOffers[3].used, web3.toWei(0.1, 'ether'), "error using offer");
+
+      return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
+    }).then(
+
+    function (sortedOffers) {
+      // console.dir(sortedOffers)
+      assert.equal(sortedOffers.length, investmentsSorted.length - 3, "too many elements");
+
+      remainingOffers = [];
+
+      for (var ix in sortedOffers) {
+        remainingOffers.push({
+          investor: sortedOffers[ix].investor,
+          amount_eth: Number(web3.fromWei(sortedOffers[ix].amount, "ether")),
+          multiplier_micro: Number(sortedOffers[ix].multiplier_micro)
+        })
+      }
+
+      /* lets make another investment now */
+      return makeInvestments(investmentFund, investments2);
+    }).then(
+
+    function (txt) {
+      return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
+    }).then(
+
+    function (sortedOffers) {
+      var investmentsOffersNow = remainingOffers.concat(investments2);
+      // console.log(investmentsOffersNow)
+
+      var investmentsOffersNowSorted = JSON.parse(JSON.stringify(investmentsOffersNow));
+      investmentsOffersNowSorted.sort(compareInvestments);
+      // console.log(investmentsOffersNowSorted)
+
+      for (var ix in sortedOffers) {
+        var offer = sortedOffers[ix];
+        assert.equal(offer.investor, investmentsOffersNowSorted[ix].investor, "investment address wrong");
+        assert.equal(offer.multiplier_micro, investmentsOffersNowSorted[ix].multiplier_micro, "investment multiplier wrong");
+        assert.equal(offer.amount, web3.toWei(investmentsOffersNowSorted[ix].amount_eth, "ether"), "investment amount wrong");
+      }
+
+      /* now lets try to spend more than what is totally available */
+      totalAvailable = 0;
+      sortedOffers.forEach(function(investment) {
+        totalAvailable += Number(web3.fromWei(investment.amount - investment.used), "ether");
+      })
+
+      return investmentFund.spend(web3.toWei(totalAvailable + 1), { from: accounts[0] });
+    }).catch(
+
+    function (txt) {
+      // TODO: assert failed
+      console.log('it failed as expected')
+
+      /* now spend almost all the funds */
+      return investmentFund.spend(web3.toWei(totalAvailable - 0.1), { from: accounts[0] });
+    }).then(
+
+    function (txn) {
+      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+    }).then(
+
+    function (sortedUsed) {
+      console.dir(sortedUsed)
     });
   });
-
-  // it ("should spend investments in order", function() {
-  //   return investmentFund.spend(web3.toWei(1.1), { from: accounts[0] }).then(
-  //   function (txn) {
-  //
-  //     getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey)
-  //     .then(function(usedOffers) {
-  //       console.log('used offers:' + usedOffers)
-  //     });
-  //   });
-  // });
 });

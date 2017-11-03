@@ -206,6 +206,9 @@ contract CappedInvestmentFund is Ownable {
       }
 
       if (!isEnough) {
+        /* ups, not enough offers to fill this expenditure */
+        if (investmentOffersOrder.getSize() == 0) throw;
+
         elementInOffers = investmentOffersOrder.getFirst();
         ix = elementInOffers.extKey;
         investment = investments[ix];

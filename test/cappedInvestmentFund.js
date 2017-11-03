@@ -1,5 +1,22 @@
 var CappedInvestmentFund = artifacts.require("./CappedInvestmentFund.sol");
 
+const makeInvestments = function (instance, investments) {
+  var promises = []
+  for (var ix in investments) {
+    var investment = investments[ix];
+    var p = new Promise(function(resolve, reject) {
+      instance.invest(investment.multiplier_micro, 0, { from: investment.investor, value: web3.toWei(investment.amount_eth, 'ether') })
+      .then(
+      function (txn) {
+        resolve();
+      });
+    });
+    promises.push(p);
+  }
+
+  return Promise.all(promises);
+}
+
 const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
   var array = [];
   return new Promise(function(resolve, reject) {
@@ -53,6 +70,32 @@ contract('CappedInvestmentFund', function(accounts) {
   function() {
 
     var orderedInvestments = [];
+    var investments = [
+      {
+        investor: accounts[0],
+        multiplier_micro: 1100000,
+        amount_eth: 1.1
+      },
+      {
+        investor: accounts[1],
+        multiplier_micro: 1200000,
+        amount_eth: 1.2
+      },
+      {
+        investor: accounts[2],
+        multiplier_micro: 900000,
+        amount_eth: 1.3
+      },
+      {
+        investor: accounts[3],
+        multiplier_micro: 1200000,
+        amount_eth: 1.4
+      },
+      {
+        investor: accounts[4],
+        multiplier_micro: 1300000,
+        amount_eth: 1.5
+      } ];
 
     return CappedInvestmentFund.deployed()
     .then(
@@ -60,24 +103,8 @@ contract('CappedInvestmentFund', function(accounts) {
     function(instance) {
       investmentFund = instance;
       console.log('contract address: ' + investmentFund.address);
-      return investmentFund.invest(1100000, 0, {from: accounts[0], value: web3.toWei(1.1, 'ether')});
-    }).then(
 
-    function(txn) {
-      console.dir(txn)
-      return investmentFund.invest(1200000, 0, {from: accounts[1], value: web3.toWei(1.2, 'ether')});
-    }).then(
-
-    function(txn) {
-      return investmentFund.invest(900000, 0, {from: accounts[2], value: web3.toWei(1.3, 'ether')});
-    }).then(
-
-    function(txn) {
-      return investmentFund.invest(1200000, 0, {from: accounts[3], value: web3.toWei(1.4, 'ether')});
-    }).then(
-
-    function(txn) {
-      return investmentFund.invest(1300000, 0, {from: accounts[4], value: web3.toWei(1.5, 'ether')});
+      return makeInvestments(investmentFund, investments);
     }).then(
 
     function(txn) {
@@ -86,7 +113,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
     function(sortedOffers) {
       /* check the order is correct */
-      // console.log(sortedOffers);
+      console.log(sortedOffers);
 
       assert.equal(sortedOffers[0].investor, accounts[2], "investment address wrong");
       assert.equal(sortedOffers[0].amount, web3.toWei(1.3, 'ether'), "investment amount wrong");
@@ -120,17 +147,23 @@ contract('CappedInvestmentFund', function(accounts) {
       // console.dir(usedOffers)
       assert.equal(usedOffers[0].used, web3.toWei(1.1, 'ether'), "didn't used partially one offer");
 
-      console.log('spending again')
+      /* spend more */
       return investmentFund.spend(web3.toWei(0.5), { from: accounts[0] });
     }).then(
 
     function(txn) {
       // console.log('spent again')
-      // return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
     function(usedOffers) {
       // console.dir(usedOffers)
+
+      assert.equal(usedOffers[0].used, web3.toWei(1.3, 'ether'), "error using offer");
+      assert.equal(usedOffers[1].used, web3.toWei(0.3, 'ether'), "error using offer");
+
+      /* spend more */
+      return investmentFund.spend(web3.toWei(0.9), { from: accounts[0] });
     });
   });
 

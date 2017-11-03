@@ -17,6 +17,16 @@ const makeInvestments = function (instance, investments) {
   return Promise.all(promises);
 }
 
+const compareInvestments = function(a, b) {
+  if (a.multiplier_micro < b.multiplier_micro) {
+    return -1;
+  }
+  if (a.multiplier_micro > b.multiplier_micro) {
+    return 1;
+  }
+  return 0;
+}
+
 const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
   var array = [];
   return new Promise(function(resolve, reject) {
@@ -113,27 +123,19 @@ contract('CappedInvestmentFund', function(accounts) {
 
     function(sortedOffers) {
       /* check the order is correct */
-      console.log(sortedOffers);
+      // console.log(sortedOffers);
 
-      assert.equal(sortedOffers[0].investor, accounts[2], "investment address wrong");
-      assert.equal(sortedOffers[0].amount, web3.toWei(1.3, 'ether'), "investment amount wrong");
-      assert.equal(sortedOffers[0].multiplier_micro, 900000, "investment multiplier wrong");
+      var investmentsSorted = JSON.parse(JSON.stringify(investments));
+      investmentsSorted.sort(compareInvestments);
 
-      assert.equal(sortedOffers[1].investor, accounts[0], "investment address wrong");
-      assert.equal(sortedOffers[1].amount, web3.toWei(1.1, 'ether'), "investment amount wrong");
-      assert.equal(sortedOffers[1].multiplier_micro, 1100000, "investment multiplier wrong");
+      assert.equal(sortedOffers.length, investmentsSorted.length, "investment number wrong");
 
-      assert.equal(sortedOffers[2].investor, accounts[1], "investment address wrong");
-      assert.equal(sortedOffers[2].amount, web3.toWei(1.2, 'ether'), "investment amount wrong");
-      assert.equal(sortedOffers[2].multiplier_micro, 1200000, "investment multiplier wrong");
-
-      assert.equal(sortedOffers[3].investor, accounts[3], "investment address wrong");
-      assert.equal(sortedOffers[3].amount, web3.toWei(1.4, 'ether'), "investment amount wrong");
-      assert.equal(sortedOffers[3].multiplier_micro, 1200000, "investment multiplier wrong");
-
-      assert.equal(sortedOffers[4].investor, accounts[4], "investment address wrong");
-      assert.equal(sortedOffers[4].amount, web3.toWei(1.5, 'ether'), "investment amount wrong");
-      assert.equal(sortedOffers[4].multiplier_micro, 1300000, "investment multiplier wrong");
+      for (var ix in sortedOffers) {
+        var offer = sortedOffers[ix];
+        assert.equal(offer.investor, investmentsSorted[ix].investor, "investment address wrong");
+        assert.equal(offer.multiplier_micro, investmentsSorted[ix].multiplier_micro, "investment multiplier wrong");
+        assert.equal(offer.amount, web3.toWei(investmentsSorted[ix].amount_eth, "ether"), "investment amount wrong");
+      }
 
       return investmentFund.spend(web3.toWei(1.1), { from: accounts[0] });
 

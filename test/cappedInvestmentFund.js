@@ -64,6 +64,7 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function(txn) {
+      console.dir(txn)
       return investmentFund.invest(1200000, 0, {from: accounts[1], value: web3.toWei(1.2, 'ether')});
     }).then(
 
@@ -124,12 +125,12 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function(txn) {
-      console.log('spent again')
-      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+      // console.log('spent again')
+      // return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
     function(usedOffers) {
-      console.dir(usedOffers)
+      // console.dir(usedOffers)
     });
   });
 

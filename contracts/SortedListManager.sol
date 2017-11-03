@@ -195,4 +195,12 @@ library SortedListManager {
     return self.list[key];
   }
 
+  function getSize (SortedList storage self)
+    internal
+    constant
+    returns (uint size)
+  {
+    return self.size;
+  }
+
 }

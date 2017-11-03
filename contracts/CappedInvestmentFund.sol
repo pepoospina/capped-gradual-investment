@@ -166,16 +166,22 @@ contract CappedInvestmentFund is Ownable {
     uint spent = 0;
     uint stillToSpend = totalToSpend - spent;
 
+    if (investmentOffersOrder.getSize() == 0) throw;
+
     SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
-
     Investment storage investment = investments[ix];
 
     while (stillToSpend > 0) {
 
       uint available = investment.amount - investment.used;
+      bool isEnough = false;
 
-      if (available > stillToSpend) {
+      if (available >= stillToSpend) {
+        isEnough = true;
+      }
+
+      if (isEnough) {
         /* if there is more available than needed */
         investment.used += stillToSpend;
         stillToSpend = 0;
@@ -186,7 +192,7 @@ contract CappedInvestmentFund is Ownable {
       }
 
       /* add the investment to the investmentsUsedOrder list if not already added */
-      if (investmentsUsedOrder.getLast().extKey != ix) {
+      if (investmentsUsedOrder.getSize() == 0 || investmentsUsedOrder.getLast().extKey != ix) {
         /* not yet added */
         SortedListManager.ListElement memory listElement;
         listElement.extKey = ix;
@@ -195,11 +201,14 @@ contract CappedInvestmentFund is Ownable {
       }
 
       if (investment.used >= investment.amount) {
-        /* TODO: Actually it should only be ==, but... i am scared that
-        the whole process breaks for a minor overshoot... */
-
         /* remove the element from the offer list because it has been fully used */
         investmentOffersOrder.popFirst();
+      }
+
+      if (!isEnough) {
+        elementInOffers = investmentOffersOrder.getFirst();
+        ix = elementInOffers.extKey;
+        investment = investments[ix];
       }
     }
   }

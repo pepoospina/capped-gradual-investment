@@ -171,6 +171,14 @@ library SortedListManager {
     }
   }
 
+  function getFirstKey (SortedList storage self)
+    internal
+    constant
+    returns (uint key)
+  {
+    return self.firstKey;
+  }
+
   function getFirst (SortedList storage self)
     internal
     constant

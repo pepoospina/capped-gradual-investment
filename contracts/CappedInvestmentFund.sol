@@ -65,37 +65,37 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentOfferDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
-      (investor, amount, multiplier_micro, used, paid, nextKey) =
+      (investor, amount, multiplier_micro, used, filled_micros, paid, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
-      return (0, 0, 0, 0, 0, 0);
+      return (0, 0, 0, 0, 0, 0, 0);
     }
   }
 
   function getInvestmentUsedDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
-      (investor, amount, multiplier_micro, used, paid, nextKey) =
+      (investor, amount, multiplier_micro, used, filled_micros, paid, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
-      return (0, 0, 0, 0, 0, 0);
+      return (0, 0, 0, 0, 0, 0, 0);
     }
   }
 
   function getInvestmentDataAtIx (uint ix, uint nextKey)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint paid, uint nextKeyOut)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKeyOut)
   {
     Investment memory investment = investments[ix];
 
@@ -103,6 +103,7 @@ contract CappedInvestmentFund is Ownable {
             investment.amount,
             investment.multiplier_micro,
             investment.used,
+            investment.filled_micros,
             investment.paid,
             nextKey);
   }
@@ -135,7 +136,7 @@ contract CappedInvestmentFund is Ownable {
   function ()
     payable
   {
-    if (msg.value() > 0) {
+    if (msg.value > 0) {
       fillUsedInvestments(msg.value);
     }
   }
@@ -224,7 +225,9 @@ contract CappedInvestmentFund is Ownable {
     }
   }
 
-  function fillUsedInvestments(uint totalToFill) {
+  function fillUsedInvestments(uint totalToFill)
+    internal
+  {
     uint stillToFill_micros = totalToFill*10000;
 
     if (investmentsUsedOrder.getSize() == 0) throw;
@@ -236,14 +239,16 @@ contract CappedInvestmentFund is Ownable {
     SortedListManager.ListElement memory currentElement = investmentsUsedOrder.get(currToFillKey);
     Investment storage investment = investments[currentElement.extKey];
 
-    while (stillToFill > 0) {
+    uint k = 0;
+    while (k == 0) {
+      k++;
+    /*while (stillToFill_micros > 0) {*/
       uint thisDebt_micros = investment.used*investment.multiplier_micro - investment.filled_micros;
       bool justEnoughForThis = false;
 
       if (thisDebt_micros >= stillToFill_micros) {
-        /* it means that more there are still more funds to fill
-           investments than those needed by the current investment
-           in the used list. */
+        /* it means that there are more funds than those needed
+           by the current investment in the used list. */
         justEnoughForThis = true;
       }
 
@@ -262,9 +267,10 @@ contract CappedInvestmentFund is Ownable {
           currToFillKey = currentElement.next;
           currentElement = investmentsUsedOrder.get(currToFillKey);
           investment = investments[currentElement.extKey];
-        } else {
-          /* all investments are filled */
-          allInvestmentsFilled = true;
+        }  else {
+          /* eventhough there are more funds, no investments are to be fullfiled
+            funds are then sink wihtin the contract. */
+          stillToFill_micros = 0;
         }
       }
     }

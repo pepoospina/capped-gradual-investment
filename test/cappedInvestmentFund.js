@@ -55,11 +55,12 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
             amount: res[1],
             multiplier_micro: res[2],
             used: res[3],
-            paid: res[4]
+            filled_micros: res[4],
+            paid: res[5]
           }
         array.push(element);
 
-        var nextKey = res[5];
+        var nextKey = res[6];
         if (nextKey != 0) {
           /* recursive call filling sortedOffers
           until the end of the list */
@@ -123,6 +124,7 @@ contract('CappedInvestmentFund', function(accounts) {
     var remainingSorted = [];
     var totalAvailable = 0;
 
+    console.log('getting instance...');
     return CappedInvestmentFund.deployed()
     .then(
 
@@ -130,6 +132,7 @@ contract('CappedInvestmentFund', function(accounts) {
       investmentFund = instance;
       console.log('contract address: ' + investmentFund.address);
 
+      console.log('making investments...');
       return makeInvestments(investmentFund, investments);
     }).then(
 
@@ -140,7 +143,6 @@ contract('CappedInvestmentFund', function(accounts) {
     function(sortedOffers) {
       /* check the order is correct */
       // console.log(sortedOffers);
-
       investmentsSorted = JSON.parse(JSON.stringify(investments));
       investmentsSorted.sort(compareInvestments);
 
@@ -154,11 +156,13 @@ contract('CappedInvestmentFund', function(accounts) {
       }
 
       /* spend 80% of the first investment */
+      console.log('spending 80% of first investment...');
       return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
 
     }).then(
 
     function(txn) {
+      console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
@@ -167,12 +171,18 @@ contract('CappedInvestmentFund', function(accounts) {
       assert.equal(usedOffers[0].used, web3.toWei(investmentsSorted[0].amount_eth*0.8, 'ether'), "didn't used partially one offer");
 
       /* spend another 80% of the first investment */
+      console.log('spending another 80% of first investment...');
+      console.log(investmentsSorted[0])
       return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
     }).then(
 
     function(txn) {
       // console.log('spent again')
+      console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+    }).catch(function () {
+      console.log('error spending another 80%');
+
     }).then(
 
     function(usedOffers) {
@@ -183,6 +193,7 @@ contract('CappedInvestmentFund', function(accounts) {
       /* second investment used for what was missing - 60% to reach 80% */
       assert.equal(usedOffers[1].used, web3.toWei(investmentsSorted[0].amount_eth*0.6, 'ether'), "error using offer");
 
+      console.log('getting sorted offered investments...');
       return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
     }).then(
 
@@ -198,12 +209,15 @@ contract('CappedInvestmentFund', function(accounts) {
       var remaining = investmentsSorted[1].amount_eth - investmentsSorted[0].amount_eth*0.6
       /* spend all what remains from second investments + all third investment + 0.1 eth if the forth investment */
       var spendNow = remaining + investmentsSorted[2].amount_eth + 0.1;
+
+      console.log('spending more than one investment at a time...');
       return investmentFund.spend(web3.toWei(spendNow), { from: accounts[0] });
 
     }).then (
 
     function(txn) {
       // console.log('spent again')
+      console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
@@ -215,6 +229,7 @@ contract('CappedInvestmentFund', function(accounts) {
       assert.equal(usedOffers[2].used, web3.toWei(investmentsSorted[2].amount_eth, 'ether'), "error using offer");
       assert.equal(usedOffers[3].used, web3.toWei(0.1, 'ether'), "error using offer");
 
+      console.log('getting sorted offered investments...');
       return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
     }).then(
 
@@ -233,10 +248,12 @@ contract('CappedInvestmentFund', function(accounts) {
       }
 
       /* lets now make another investment */
+      console.log('making second row of investments...');
       return makeInvestments(investmentFund, investments2);
     }).then(
 
     function (txt) {
+      console.log('getting sorted offered investments...');
       return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
     }).then(
 
@@ -259,15 +276,19 @@ contract('CappedInvestmentFund', function(accounts) {
         totalAvailable += Number(web3.fromWei(investment.amount - investment.used), "ether");
       })
 
+      console.log('spending more than what is totally available...');
       return investmentFund.spend(web3.toWei(totalAvailable + 1), { from: accounts[0] });
     }).catch(
 
+    /* TODO: This catch catches all exceptions hapenign avo */
     function (txt) {
       /* now spend almost all the funds */
+      console.log('spending almost all of what is totally available...');
       return investmentFund.spend(web3.toWei(totalAvailable - 0.1), { from: accounts[0] });
     }).then(
 
     function (txn) {
+      console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
@@ -290,7 +311,18 @@ contract('CappedInvestmentFund', function(accounts) {
         }
       }
 
-      /* now lets receive some funds */
+      /* now lets receive some revenue */
+      console.log('sending revenue');
+      return web3.eth.sendTransaction({from: accounts[5], value: web3.toWei(1, "ether")});
+    }).then(
+
+    function (txn) {
+      console.log('getting sorted used investments...');
+      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+    }).then(
+
+    function (sortedUsed) {
+      console.dir(sortedUsed);
     });
   });
 });

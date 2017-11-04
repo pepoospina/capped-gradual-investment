@@ -10,6 +10,7 @@ contract CappedInvestmentFund is Ownable {
     uint amount;
     uint multiplier_micro;
     uint used;
+    uint filled_micros;
     uint paid;
   }
 
@@ -22,6 +23,8 @@ contract CappedInvestmentFund is Ownable {
 
   SortedListManager.SortedList public investmentOffersOrder;
   SortedListManager.SortedList public investmentsUsedOrder;
+
+  uint currToFillKey = 0;
 
   function CappedInvestmentFund () {
   }
@@ -128,6 +131,15 @@ contract CappedInvestmentFund is Ownable {
   }
 
 
+  /* fallback function capturing funds received as revenue, not as investments */
+  function ()
+    payable
+  {
+    if (msg.value() > 0) {
+      fillUsedInvestments(msg.value);
+    }
+  }
+
   /**
   *  atKey: The key of the element in investmentOffersOrder at which the input investment
   *  cab be added safely to the right without breaking the list order.
@@ -207,15 +219,55 @@ contract CappedInvestmentFund is Ownable {
 
       if (!isEnough) {
         /* ups, not enough offers to fill this expenditure */
-        if (investmentOffersOrder.getSize() == 0) throw;
 
-        elementInOffers = investmentOffersOrder.getFirst();
-        ix = elementInOffers.extKey;
-        investment = investments[ix];
       }
     }
   }
 
-  function payback() {
+  function fillUsedInvestments(uint totalToFill) {
+    uint stillToFill_micros = totalToFill*10000;
+
+    if (investmentsUsedOrder.getSize() == 0) throw;
+
+    if (currToFillKey == 0) {
+      currToFillKey = investmentOffersOrder.getFirstKey();
+    }
+
+    SortedListManager.ListElement memory currentElement = investmentsUsedOrder.get(currToFillKey);
+    Investment storage investment = investments[currentElement.extKey];
+
+    while (stillToFill > 0) {
+      uint thisDebt_micros = investment.used*investment.multiplier_micro - investment.filled_micros;
+      bool justEnoughForThis = false;
+
+      if (thisDebt_micros >= stillToFill_micros) {
+        /* it means that more there are still more funds to fill
+           investments than those needed by the current investment
+           in the used list. */
+        justEnoughForThis = true;
+      }
+
+      if (justEnoughForThis) {
+        /* use all the funds to fill this investment */
+        investment.filled_micros += stillToFill_micros;
+        stillToFill_micros = 0;
+      } else {
+        /* fill this investment and substract to the funds remaing to
+           fill other investments */
+        investment.filled_micros += thisDebt_micros;
+        stillToFill_micros -= thisDebt_micros;
+
+        /* go and fill the next investment */
+        if (currentElement.next > 0) {
+          currToFillKey = currentElement.next;
+          currentElement = investmentsUsedOrder.get(currToFillKey);
+          investment = investments[currentElement.extKey];
+        } else {
+          /* all investments are filled */
+          allInvestmentsFilled = true;
+        }
+      }
+    }
+
   }
 }

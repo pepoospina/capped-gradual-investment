@@ -289,6 +289,8 @@ contract('CappedInvestmentFund', function(accounts) {
           assert.equal(sortedUsed[ix].amount.toString(), sortedUsed[ix].used.toString(), "investment amount used wrong");
         }
       }
+
+      /* now lets receive some funds */
     });
   });
 });

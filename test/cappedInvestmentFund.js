@@ -120,6 +120,7 @@ contract('CappedInvestmentFund', function(accounts) {
         amount_eth: 1.7
       }];
     var remainingOffers = [];
+    var remainingSorted = [];
     var totalAvailable = 0;
 
     return CappedInvestmentFund.deployed()
@@ -231,7 +232,7 @@ contract('CappedInvestmentFund', function(accounts) {
         })
       }
 
-      /* lets make another investment now */
+      /* lets now make another investment */
       return makeInvestments(investmentFund, investments2);
     }).then(
 
@@ -240,18 +241,16 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (sortedOffers) {
-      var investmentsOffersNow = remainingOffers.concat(investments2);
       // console.log(investmentsOffersNow)
 
-      var investmentsOffersNowSorted = JSON.parse(JSON.stringify(investmentsOffersNow));
-      investmentsOffersNowSorted.sort(compareInvestments);
-      // console.log(investmentsOffersNowSorted)
+      remainingSorted = JSON.parse(JSON.stringify(remainingOffers.concat(investments2)));
+      remainingSorted.sort(compareInvestments);
 
       for (var ix in sortedOffers) {
         var offer = sortedOffers[ix];
-        assert.equal(offer.investor, investmentsOffersNowSorted[ix].investor, "investment address wrong");
-        assert.equal(offer.multiplier_micro, investmentsOffersNowSorted[ix].multiplier_micro, "investment multiplier wrong");
-        assert.equal(offer.amount, web3.toWei(investmentsOffersNowSorted[ix].amount_eth, "ether"), "investment amount wrong");
+        assert.equal(offer.investor, remainingSorted[ix].investor, "investment address wrong");
+        assert.equal(offer.multiplier_micro, remainingSorted[ix].multiplier_micro, "investment multiplier wrong");
+        assert.equal(offer.amount, web3.toWei(remainingSorted[ix].amount_eth, "ether"), "investment amount wrong");
       }
 
       /* now lets try to spend more than what is totally available */
@@ -264,9 +263,6 @@ contract('CappedInvestmentFund', function(accounts) {
     }).catch(
 
     function (txt) {
-      // TODO: assert failed
-      console.log('it failed as expected')
-
       /* now spend almost all the funds */
       return investmentFund.spend(web3.toWei(totalAvailable - 0.1), { from: accounts[0] });
     }).then(
@@ -276,7 +272,23 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (sortedUsed) {
-      console.dir(sortedUsed)
+      // console.dir(sortedUsed)
+
+      var investmentUsedRef = investmentsSorted.slice(0, 4).concat(remainingSorted);
+      assert.equal(sortedUsed.length, investmentUsedRef.length, "unexpected number of used investments");
+
+      for (var ix in sortedUsed) {
+        assert.equal(sortedUsed[ix].investor, investmentUsedRef[ix].investor, "investment address wrong");
+        assert.equal(sortedUsed[ix].multiplier_micro, investmentUsedRef[ix].multiplier_micro, "investment multiplier wrong");
+        assert.equal(sortedUsed[ix].amount, web3.toWei(investmentUsedRef[ix].amount_eth, "ether"), "investment amount wrong");
+      }
+
+      for (var ix in sortedUsed) {
+        /* all elements used, expect the last one*/
+        if (ix < (sortedUsed.length - 1)) {
+          assert.equal(sortedUsed[ix].amount.toString(), sortedUsed[ix].used.toString(), "investment amount used wrong");
+        }
+      }
     });
   });
 });

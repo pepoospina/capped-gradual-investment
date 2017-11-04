@@ -172,7 +172,6 @@ contract('CappedInvestmentFund', function(accounts) {
 
       /* spend another 80% of the first investment */
       console.log('spending another 80% of first investment...');
-      console.log(investmentsSorted[0])
       return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
     }).then(
 
@@ -317,12 +316,13 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (txn) {
+      console.dir(txn);
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
     function (sortedUsed) {
-      console.dir(sortedUsed);
+      // console.dir(sortedUsed);
     });
   });
 });

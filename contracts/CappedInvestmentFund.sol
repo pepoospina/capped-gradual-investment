@@ -232,7 +232,7 @@ contract CappedInvestmentFund is Ownable {
   function fillUsedInvestments(uint totalToFill)
     internal
   {
-    uint stillToFill_micros = totalToFill*10000;
+    uint stillToFill_micros = totalToFill*1000000;
 
     if (investmentsUsedOrder.getSize() == 0) throw;
 
@@ -243,10 +243,7 @@ contract CappedInvestmentFund is Ownable {
     SortedListManager.ListElement memory currentElement = investmentsUsedOrder.get(currToFillKey);
     Investment storage investment = investments[currentElement.extKey];
 
-    uint k = 0;
-    while (k == 0) {
-      k++;
-    /*while (stillToFill_micros > 0) {*/
+    while (stillToFill_micros > 0) {
       uint thisDebt_micros = investment.used*investment.multiplier_micro - investment.filled_micros;
       bool justEnoughForThis = false;
 

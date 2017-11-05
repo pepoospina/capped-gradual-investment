@@ -316,13 +316,12 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (txn) {
-      console.dir(txn);
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
 
     function (sortedUsed) {
-      // console.dir(sortedUsed);
+      console.dir(sortedUsed);
     });
   });
 });

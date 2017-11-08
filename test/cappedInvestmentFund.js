@@ -58,7 +58,7 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
             multiplier_micro: res[2],
             used: res[3],
             filled_micros: res[4],
-            paid: res[5]
+            paid_micros: res[5]
           }
         array.push(element);
 
@@ -78,7 +78,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
   var investmentFund;
 
-  it ("should add multiple investments and used them",
+  it ("should add multiple investments, use them and pay them back",
 
   function() {
 
@@ -128,6 +128,7 @@ contract('CappedInvestmentFund', function(accounts) {
     var remainingSorted = [];
     var investmentsUsedRef = [];
     var totalAvailable = 0;
+    var investorBalance = 0;
 
     /* asserts work only for these numbers */
     var revenue_eth = [1, 1.5, 2.5, 1.5];
@@ -342,10 +343,9 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (sortedUsed) {
-      /* revenue is not enought to fill this investment */
+      /* revenue is not enought to paid this investment */
       // console.dir(sortedUsed[0])
-      // console.dir(investmentsUsedRef[0])
-
+      // console.digr(investmentsUsedRef[0])
 
       var amount1 = new BigNumber(web3.toWei(investmentsUsedRef[0].amount_eth, "ether"));
       var mult1 = new BigNumber(investmentsUsedRef[0].multiplier_micro);
@@ -362,6 +362,41 @@ contract('CappedInvestmentFund', function(accounts) {
       var remaining_micros = received.times(1000000).minus(amount1.times(mult1).plus(amount2.times(mult2)));
       assert.equal(filled_micros3.cmp(remaining_micros), 0, "to fill value not expected");
 
+      /* payday! test investors can withdraw their funds + multipliers */
+      /* prepare by getting the investor current balance */
+
+      console.log("investor 1 ask to be paid back...")
+      investorBalance = web3.eth.getBalance(accounts[8]);
+      return investmentFund.payback(1, accounts[8], { from: investmentsUsedRef[0].investor })
+    }).then(
+
+    function (txn) {
+      var newBalance = web3.eth.getBalance(accounts[8])
+      var received = new BigNumber(newBalance - investorBalance);
+      // console.log("so he received " + web3.fromWei(received, "ether") + " ether");
+
+      var amount1 = new BigNumber(web3.toWei(investmentsUsedRef[0].amount_eth, "ether"));
+      var mult1 = new BigNumber(investmentsUsedRef[0].multiplier_micro);
+      var expected_wei = amount1.times(mult1).div(1000000);
+
+      assert.equal(expected_wei.cmp(received), 0, "not received what expected");
+
+      /* now investor 2*/
+      console.log("investor 2 ask to be paid back...")
+      investorBalance = web3.eth.getBalance(accounts[9]);
+      return investmentFund.payback(2, accounts[9], { from: investmentsUsedRef[1].investor })
+    }).then(
+
+    function(txn) {
+      var newBalance = web3.eth.getBalance(accounts[9])
+      var received = new BigNumber(newBalance - investorBalance);
+      // console.log("so he received " + web3.fromWei(received, "ether") + " ether");
+
+      var amount1 = new BigNumber(web3.toWei(investmentsUsedRef[1].amount_eth, "ether"));
+      var mult1 = new BigNumber(investmentsUsedRef[1].multiplier_micro);
+      var expected_wei = amount1.times(mult1).div(1000000);
+
+      assert.equal(expected_wei.cmp(received), 0, "not received what expected");
     });
   });
 

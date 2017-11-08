@@ -11,7 +11,7 @@ contract CappedInvestmentFund is Ownable {
     uint multiplier_micro;
     uint used;
     uint filled_micros;
-    uint paid;
+    uint paid_micros;
   }
 
   /* the array holds the investments, while the OrderedListManager holds
@@ -65,11 +65,11 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentOfferDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
-      (investor, amount, multiplier_micro, used, filled_micros, paid, nextKey) =
+      (investor, amount, multiplier_micro, used, filled_micros, paid_micros, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
@@ -80,11 +80,11 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentUsedDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
-      (investor, amount, multiplier_micro, used, filled_micros, paid, nextKey) =
+      (investor, amount, multiplier_micro, used, filled_micros, paid_micros, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
@@ -95,7 +95,7 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentDataAtIx (uint ix, uint nextKey)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid, uint nextKeyOut)
+    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKeyOut)
   {
     Investment memory investment = investments[ix];
 
@@ -104,7 +104,7 @@ contract CappedInvestmentFund is Ownable {
             investment.multiplier_micro,
             investment.used,
             investment.filled_micros,
-            investment.paid,
+            investment.paid_micros,
             nextKey);
   }
 
@@ -220,7 +220,7 @@ contract CappedInvestmentFund is Ownable {
     }
   }
 
-  function sendRevenue()
+  function sendRevenue ()
     payable
     public
   {
@@ -269,4 +269,30 @@ contract CappedInvestmentFund is Ownable {
     }
 
   }
+
+  /* the key is the key on the usedInvestements list,
+     sendTo is received so that txn fees are not paid
+     by the receiver. However, only the investor can
+     trigger the payback */
+  function payback (uint key, address sendTo)
+    public
+  {
+    SortedListManager.ListElement memory elementInOffers = investmentsUsedOrder.get(key);
+    Investment storage investment = investments[elementInOffers.extKey];
+
+    /* only the investor can withdraw his/her invested funds */
+    if (investment.investor != msg.sender) throw;
+    if (sendTo == 0) throw;
+
+    uint toPay_micros = investment.filled_micros - investment.paid_micros;
+    if (toPay_micros > 0) {
+      investment.paid_micros += toPay_micros;
+      uint toPay_wei = investment.paid_micros/1000000;
+      if (!sendTo.send(toPay_wei)) {
+        /* if error sending, revert the change to the paid_micros*/
+        investment.paid_micros -= toPay_micros;
+      }
+    }
+  }
+
 }

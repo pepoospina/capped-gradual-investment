@@ -1,3 +1,5 @@
+const BigNumber = require('bignumber.js')
+
 var CappedInvestmentFund = artifacts.require("./CappedInvestmentFund.sol");
 
 const makeInvestments = function (instance, investments) {
@@ -76,11 +78,12 @@ contract('CappedInvestmentFund', function(accounts) {
 
   var investmentFund;
 
-  it ("should add a investment in order",
+  it ("should add multiple investments and used them",
 
   function() {
 
     var orderedInvestments = [];
+    /* asserts work only for these numbers */
     var investments = [
       {
         investor: accounts[0],
@@ -109,6 +112,7 @@ contract('CappedInvestmentFund', function(accounts) {
       } ];
     var investmentsSorted = [];
 
+    /* asserts work only for these numbers */
     var investments2 = [
       {
         investor: accounts[5],
@@ -122,7 +126,11 @@ contract('CappedInvestmentFund', function(accounts) {
       }];
     var remainingOffers = [];
     var remainingSorted = [];
+    var investmentsUsedRef = [];
     var totalAvailable = 0;
+
+    /* asserts work only for these numbers */
+    var revenue_eth = [1, 1.5, 2.5, 1.5];
 
     console.log('getting instance...');
     return CappedInvestmentFund.deployed()
@@ -294,13 +302,13 @@ contract('CappedInvestmentFund', function(accounts) {
     function (sortedUsed) {
       // console.dir(sortedUsed)
 
-      var investmentUsedRef = investmentsSorted.slice(0, 4).concat(remainingSorted);
-      assert.equal(sortedUsed.length, investmentUsedRef.length, "unexpected number of used investments");
+      investmentsUsedRef = investmentsSorted.slice(0, 4).concat(remainingSorted);
+      assert.equal(sortedUsed.length, investmentsUsedRef.length, "unexpected number of used investments");
 
       for (var ix in sortedUsed) {
-        assert.equal(sortedUsed[ix].investor, investmentUsedRef[ix].investor, "investment address wrong");
-        assert.equal(sortedUsed[ix].multiplier_micro, investmentUsedRef[ix].multiplier_micro, "investment multiplier wrong");
-        assert.equal(sortedUsed[ix].amount, web3.toWei(investmentUsedRef[ix].amount_eth, "ether"), "investment amount wrong");
+        assert.equal(sortedUsed[ix].investor, investmentsUsedRef[ix].investor, "investment address wrong");
+        assert.equal(sortedUsed[ix].multiplier_micro, investmentsUsedRef[ix].multiplier_micro, "investment multiplier wrong");
+        assert.equal(sortedUsed[ix].amount, web3.toWei(investmentsUsedRef[ix].amount_eth, "ether"), "investment amount wrong");
       }
 
       for (var ix in sortedUsed) {
@@ -312,7 +320,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
       /* now lets receive some revenue */
       console.log('sending revenue');
-      return web3.eth.sendTransaction({from: accounts[5], value: web3.toWei(1, "ether")});
+      return investmentFund.sendRevenue({from: accounts[5], value: web3.toWei(revenue_eth[0], "ether")});
     }).then(
 
     function (txn) {
@@ -321,7 +329,40 @@ contract('CappedInvestmentFund', function(accounts) {
     }).then(
 
     function (sortedUsed) {
-      console.dir(sortedUsed);
+      /* revenue is not enought to fill this investment */
+      assert.equal(sortedUsed[0].filled_micros, web3.toWei(revenue_eth[0], "ether")*1000000, "to fill value not expected");
+
+      console.log('sending revenue II');
+      return investmentFund.sendRevenue({from: accounts[5], value: web3.toWei(revenue_eth[1], "ether")});
+    }).then(
+
+    function (txn) {
+      console.log('getting sorted used investments...');
+      return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
+    }).then(
+
+    function (sortedUsed) {
+      /* revenue is not enought to fill this investment */
+      // console.dir(sortedUsed[0])
+      // console.dir(investmentsUsedRef[0])
+
+
+      var amount1 = new BigNumber(web3.toWei(investmentsUsedRef[0].amount_eth, "ether"));
+      var mult1 = new BigNumber(investmentsUsedRef[0].multiplier_micro);
+      var filled_micros1 = new BigNumber(sortedUsed[0].filled_micros);
+      assert.equal(filled_micros1.cmp(amount1.times(mult1)), 0, "to fill value not expected");
+
+      var amount2 = new BigNumber(web3.toWei(investmentsUsedRef[1].amount_eth, "ether"));
+      var mult2 = new BigNumber(investmentsUsedRef[1].multiplier_micro);
+      var filled_micros2 = new BigNumber(sortedUsed[1].filled_micros);
+      assert.equal(filled_micros2.cmp(amount2.times(mult2)), 0, "to fill value not expected");
+
+      var filled_micros3 = new BigNumber(sortedUsed[2].filled_micros);
+      var received = new BigNumber(web3.toWei(revenue_eth[0] + revenue_eth[1], "ether"));
+      var remaining_micros = received.times(1000000).minus(amount1.times(mult1).plus(amount2.times(mult2)));
+      assert.equal(filled_micros3.cmp(remaining_micros), 0, "to fill value not expected");
+
     });
   });
+
 });

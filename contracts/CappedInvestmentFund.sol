@@ -132,15 +132,6 @@ contract CappedInvestmentFund is Ownable {
   }
 
 
-  /* fallback function capturing funds received as revenue, not as investments */
-  function ()
-    payable
-  {
-    if (msg.value > 0) {
-      fillUsedInvestments(msg.value);
-    }
-  }
-
   /**
   *  atKey: The key of the element in investmentOffersOrder at which the input investment
   *  cab be added safely to the right without breaking the list order.
@@ -229,15 +220,16 @@ contract CappedInvestmentFund is Ownable {
     }
   }
 
-  function fillUsedInvestments(uint totalToFill)
-    internal
+  function sendRevenue()
+    payable
+    public
   {
-    uint stillToFill_micros = totalToFill*1000000;
+    uint stillToFill_micros = msg.value*1000000;
 
     if (investmentsUsedOrder.getSize() == 0) throw;
 
     if (currToFillKey == 0) {
-      currToFillKey = investmentOffersOrder.getFirstKey();
+      currToFillKey = investmentsUsedOrder.getFirstKey();
     }
 
     SortedListManager.ListElement memory currentElement = investmentsUsedOrder.get(currToFillKey);

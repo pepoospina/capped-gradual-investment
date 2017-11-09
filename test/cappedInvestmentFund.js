@@ -16,6 +16,7 @@ const makeInvestments = function (instance, investments) {
     promises.push(p);
   }
 
+  console.log(promises)
   return Promise.all(promises);
 }
 
@@ -35,7 +36,7 @@ const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
     getLowestKeyMethod.call().then(
       function(key) {
         if (key > 0) {
-          // console.log('first key: ' + key)
+          console.log('first key: ' + key)
           getSortedElementsRec(getElementAtKeyMethod, key, array).then(
             function (array) {
               resolve(array);
@@ -53,16 +54,20 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
       function (res) {
 
         var element = {
-            investor: res[0],
-            amount: res[1],
-            multiplier_micro: res[2],
-            used: res[3],
-            filled_micros: res[4],
-            paid_micros: res[5]
-          }
+          investor: res[0],
+          amount: res[1],
+          multiplier_micro: res[2],
+          used: res[3],
+          filled_micros: res[4],
+          paid_micros: res[5]
+        }
+
         array.push(element);
+        console.log('array:');
+        console.dir(array);_
 
         var nextKey = res[6];
+        console.log('nextKey:' + nextKey);
         if (nextKey != 0) {
           /* recursive call filling sortedOffers
           until the end of the list */
@@ -144,15 +149,28 @@ contract('CappedInvestmentFund', function(accounts) {
 
       console.log('making investments...');
       return makeInvestments(investmentFund, investments);
+    }).catch(function(err) {
+
+      console.log("error making investments")
+      console.log(err)
+
     }).then(
 
     function(txn) {
+
+      console.log('getting sorted elements...');
       return getSortedElements(investmentFund.getLowestInvestmentOfferKey, investmentFund.getInvestmentOfferDataAtKey);
+    }).catch(function(err) {
+
+      console.log("error getting sorted elements")
+      console.log(err)
+
     }).then(
 
     function(sortedOffers) {
       /* check the order is correct */
-      // console.log(sortedOffers);
+      console.log(sortedOffers);
+      console.log("here")
       investmentsSorted = JSON.parse(JSON.stringify(investments));
       investmentsSorted.sort(compareInvestments);
 
@@ -172,6 +190,11 @@ contract('CappedInvestmentFund', function(accounts) {
         web3.toWei(investmentsSorted[0].amount_eth*0.8),
         accounts[9],
         { from: accounts[0] });
+
+    }).catch(function(err) {
+
+      console.log("error asserting sorted offers 1 or spending")
+      console.log(err)
 
     }).then(
 
@@ -208,6 +231,7 @@ contract('CappedInvestmentFund', function(accounts) {
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).catch(function () {
+
       console.log('error spending another 80%');
 
     }).then(
@@ -310,7 +334,7 @@ contract('CappedInvestmentFund', function(accounts) {
     }).catch(
 
     /* TODO: This catch catches all exceptions hapenign avo */
-    function (txt) {
+    function (err) {
       /* now spend almost all the funds */
       console.log('spending almost all of what is totally available...');
       receiverBalance = web3.eth.getBalance(accounts[9]);

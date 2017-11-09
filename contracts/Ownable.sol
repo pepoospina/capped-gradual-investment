@@ -1,5 +1,4 @@
-pragma solidity ^0.4.8;
-
+pragma solidity ^0.4.18;
 
 /**
  * @title Ownable
@@ -15,7 +14,7 @@ contract Ownable {
    * @dev The Ownable constructor sets the original `owner` of the contract to the sender
    * account.
    */
-  function Ownable() {
+  function Ownable() public {
     owner = msg.sender;
   }
 
@@ -23,7 +22,7 @@ contract Ownable {
    * @dev Throws if called by any account other than the owner.
    */
   modifier onlyOwner() {
-    if (msg.sender != owner) throw;
+    if (msg.sender != owner) revert();
     _;
   }
 
@@ -32,7 +31,7 @@ contract Ownable {
    * @param newOwner The address to transfer ownership to.
    */
   function transferOwnership(address newOwner) onlyOwner public {
-    if(newOwner == address(0)) throw;
+    if(newOwner == address(0)) revert();
     OwnershipTransferred(owner, newOwner);
     owner = newOwner;
   }

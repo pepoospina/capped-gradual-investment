@@ -1,4 +1,4 @@
-pragma solidity ^0.4.8;
+pragma solidity ^0.4.18;
 
 import "./Ownable.sol";
 import "./SortedListManager.sol";
@@ -25,9 +25,7 @@ contract CappedInvestmentFund is Ownable {
   SortedListManager.SortedList public investmentsUsedOrder;
 
   uint currToFillKey = 0;
-
-  function CappedInvestmentFund () {
-  }
+  uint public availableToUse;
 
   /* These two methods can be used to read the entire ordered list of investments */
   function getLowestInvestmentOfferKey ()
@@ -48,6 +46,7 @@ contract CappedInvestmentFund is Ownable {
 
   function getInvestmentOfferAtKey (uint key)
     private
+    constant
     returns (Investment investment)
   {
     SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
@@ -56,6 +55,7 @@ contract CappedInvestmentFund is Ownable {
 
   function getInvestmentUsedAtKey (uint key)
     private
+    constant
     returns (Investment investment)
   {
     SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
@@ -140,6 +140,7 @@ contract CappedInvestmentFund is Ownable {
   **/
   function invest(uint multiplier_micro, uint atKey)
     payable
+    public
     returns(uint ix)
   {
     /* prepare investment offer element */
@@ -160,17 +161,15 @@ contract CappedInvestmentFund is Ownable {
   }
 
   /* start consuming from the offers and add the used investments to the investmentsUsedOrder list.
+  * Accumulates all used funds in the availableToUse counter, which makes them free to be sent.
   * If an offer is not fully used, it will remain both in the investmentOffersOrder list and in the
   * investmentsUsedOrder list */
-  function spend (uint amount)
-    public
-    onlyOwner
+  function use (uint amount)
+    private
   {
-    uint totalToSpend = amount;
-    uint spent = 0;
-    uint stillToSpend = totalToSpend - spent;
+    uint stillToSpend = amount;
 
-    if (investmentOffersOrder.getSize() == 0) throw;
+    if (investmentOffersOrder.getSize() == 0) revert();
 
     SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
@@ -211,7 +210,7 @@ contract CappedInvestmentFund is Ownable {
 
       if (!isEnough) {
         /* ups, not enough offers to fill this expenditure */
-        if (investmentOffersOrder.getSize() == 0) throw;
+        if (investmentOffersOrder.getSize() == 0) revert();
 
         elementInOffers = investmentOffersOrder.getFirst();
         ix = elementInOffers.extKey;
@@ -220,13 +219,33 @@ contract CappedInvestmentFund is Ownable {
     }
   }
 
-  function sendRevenue ()
+  /* method to spend funds freely. They must be "used" before */
+  function spend (uint amount, address sendTo)
+    public
+    onlyOwner
+  {
+    uint missing = amount - availableToUse;
+    if (missing > 0) {
+      /* mark the missing funds as used */
+      use(missing);
+    }
+
+    /* just a check that the use function worked as expected */
+    missing = amount - availableToUse;
+    if (missing > 0) revert();
+
+    /* the needed funds are marked as used, therefore send them */
+    availableToUse -= amount;
+    sendTo.transfer(amount);
+  }
+
+  function receiveRevenue ()
     payable
     public
   {
     uint stillToFill_micros = msg.value*1000000;
 
-    if (investmentsUsedOrder.getSize() == 0) throw;
+    if (investmentsUsedOrder.getSize() == 0) revert();
 
     if (currToFillKey == 0) {
       currToFillKey = investmentsUsedOrder.getFirstKey();
@@ -281,17 +300,14 @@ contract CappedInvestmentFund is Ownable {
     Investment storage investment = investments[elementInOffers.extKey];
 
     /* only the investor can withdraw his/her invested funds */
-    if (investment.investor != msg.sender) throw;
-    if (sendTo == 0) throw;
+    if (investment.investor != msg.sender) revert();
+    if (sendTo == address(0)) revert();
 
     uint toPay_micros = investment.filled_micros - investment.paid_micros;
     if (toPay_micros > 0) {
       investment.paid_micros += toPay_micros;
       uint toPay_wei = investment.paid_micros/1000000;
-      if (!sendTo.send(toPay_wei)) {
-        /* if error sending, revert the change to the paid_micros*/
-        investment.paid_micros -= toPay_micros;
-      }
+      sendTo.transfer(toPay_wei);
     }
   }
 

@@ -78,7 +78,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
   var investmentFund;
 
-  it ("should add multiple investments, use them and pay them back",
+  it ("should add multiple investments, use them and opay",
 
   function() {
 
@@ -129,6 +129,7 @@ contract('CappedInvestmentFund', function(accounts) {
     var investmentsUsedRef = [];
     var totalAvailable = 0;
     var investorBalance = 0;
+    var receiverBalance = 0;
 
     /* asserts work only for these numbers */
     var revenue_eth = [1, 1.5, 2.5, 1.5];
@@ -166,11 +167,20 @@ contract('CappedInvestmentFund', function(accounts) {
 
       /* spend 80% of the first investment */
       console.log('spending 80% of first investment...');
-      return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
+      receiverBalance = web3.eth.getBalance(accounts[9]);
+      return investmentFund.spend(
+        web3.toWei(investmentsSorted[0].amount_eth*0.8),
+        accounts[9],
+        { from: accounts[0] });
 
     }).then(
 
     function(txn) {
+      var newBalance = web3.eth.getBalance(accounts[9])
+      var received = new BigNumber(newBalance - receiverBalance);
+      var sent = new BigNumber(web3.toWei(investmentsSorted[0].amount_eth*0.8));
+      assert.equal(sent.cmp(received), 0, "funds sent not received");
+
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(
@@ -181,11 +191,20 @@ contract('CappedInvestmentFund', function(accounts) {
 
       /* spend another 80% of the first investment */
       console.log('spending another 80% of first investment...');
-      return investmentFund.spend(web3.toWei(investmentsSorted[0].amount_eth*0.8), { from: accounts[0] });
+      receiverBalance = web3.eth.getBalance(accounts[9]);
+      return investmentFund.spend(
+        web3.toWei(investmentsSorted[0].amount_eth*0.8),
+        accounts[0],
+        { from: accounts[0] });
     }).then(
 
     function(txn) {
       // console.log('spent again')
+      var newBalance = web3.eth.getBalance(accounts[9])
+      var received = new BigNumber(newBalance - receiverBalance);
+      var sent = new BigNumber(web3.toWei(investmentsSorted[0].amount_eth*0.8));
+      assert.equal(sent.cmp(received), 0, "funds sent not received");
+
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).catch(function () {
@@ -285,17 +304,28 @@ contract('CappedInvestmentFund', function(accounts) {
       })
 
       console.log('spending more than what is totally available...');
-      return investmentFund.spend(web3.toWei(totalAvailable + 1), { from: accounts[0] });
+      return investmentFund.spend(
+        web3.toWei(totalAvailable + 1), accounts[9],
+        { from: accounts[0] });
     }).catch(
 
     /* TODO: This catch catches all exceptions hapenign avo */
     function (txt) {
       /* now spend almost all the funds */
       console.log('spending almost all of what is totally available...');
-      return investmentFund.spend(web3.toWei(totalAvailable - 0.1), { from: accounts[0] });
+      receiverBalance = web3.eth.getBalance(accounts[9]);
+      return investmentFund.spend(
+        web3.toWei(totalAvailable - 0.1),
+        accounts[9],
+        { from: accounts[0] });
     }).then(
 
     function (txn) {
+      var newBalance = web3.eth.getBalance(accounts[9])
+      var received = new BigNumber(newBalance - receiverBalance);
+      var sent = new BigNumber(web3.toWei(totalAvailable - 0.1));
+      assert.equal(sent.cmp(received), 0, "funds sent not received");
+
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
     }).then(

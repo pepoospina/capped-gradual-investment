@@ -25,7 +25,13 @@ contract CappedInvestmentFund is Ownable {
   SortedListManager.SortedList public investmentsUsedOrder;
 
   uint currToFillKey = 0;
-  uint public availableToUse;
+  uint public minInvestment = 100000000000000000; // 0,1 ether by default
+  uint public availableToUse = 0;
+
+  /* setter  */
+  function setMinInvestment(uint value) public onlyOwner {
+     minInvestment = value;
+  }
 
   /* These two methods can be used to read the entire ordered list of investments */
   function getLowestInvestmentOfferKey ()
@@ -143,6 +149,8 @@ contract CappedInvestmentFund is Ownable {
     public
     returns(uint ix)
   {
+
+    if (msg.value < minInvestment) revert();
     /* prepare investment offer element */
     Investment memory newInvestment;
 
@@ -187,10 +195,12 @@ contract CappedInvestmentFund is Ownable {
       if (isEnough) {
         /* if there is more available than needed */
         investment.used += stillToSpend;
+        availableToUse += stillToSpend;
         stillToSpend = 0;
       } else {
         /* if there is less or equal available than needed */
         investment.used += available;
+        availableToUse += available;
         stillToSpend -= available;
       }
 

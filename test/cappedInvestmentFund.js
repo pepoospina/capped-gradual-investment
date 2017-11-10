@@ -35,7 +35,7 @@ const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
   return new Promise(function(resolve, reject) {
     getLowestKeyMethod.call().then(
       function(key) {
-        console.log('first key: ' + key);
+        // console.log('first key: ' + key);
         if (key.valueOf() > 0) {
           // console.log('here');
           getSortedElementsRec(getElementAtKeyMethod, key, array).then(
@@ -53,7 +53,7 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
   return new Promise(function(resolve, reject) {
     getElementAtKeyMethod.call(key).then(
       function (res) {
-        console.log('here');
+        // console.log('here');
         var element = {
           investor: res[0],
           amount: res[1],
@@ -64,8 +64,8 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
         }
 
         array.push(element);
-        console.log('array:');
-        console.dir(array);_
+        // console.log('array:');
+        // console.dir(array);_
 
         var nextKey = res[6];
         // console.log('nextKey:' + nextKey);
@@ -173,7 +173,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
     function(sortedOffers) {
       /* check the order is correct */
-      console.log(sortedOffers);
+      // console.log(sortedOffers);
 
       investmentsSorted = JSON.parse(JSON.stringify(investments));
       investmentsSorted.sort(compareInvestments);
@@ -190,7 +190,7 @@ contract('CappedInvestmentFund', function(accounts) {
       /* spend 80% of the first investment */
       console.log('spending 80% of first investment...');
       receiverBalance = web3.eth.getBalance(accounts[9]);
-      console.log(receiverBalance);
+      // console.log(receiverBalance);
       return investmentFund.spend(
         web3.toWei(investmentsSorted[0].amount_eth*0.8),
         accounts[9],
@@ -220,7 +220,7 @@ contract('CappedInvestmentFund', function(accounts) {
       /* spend another 80% of the first investment */
       console.log('spending another 80% of first investment...');
       receiverBalance = web3.eth.getBalance(accounts[9]);
-      console.log(receiverBalance);
+      // console.log(receiverBalance);
       return investmentFund.spend(
         web3.toWei(investmentsSorted[0].amount_eth*0.8),
         accounts[9],
@@ -268,7 +268,10 @@ contract('CappedInvestmentFund', function(accounts) {
       var spendNow = remaining + investmentsSorted[2].amount_eth + 0.1;
 
       console.log('spending more than one investment at a time...');
-      return investmentFund.spend(web3.toWei(spendNow), { from: accounts[0] });
+      return investmentFund.spend(
+        web3.toWei(spendNow),
+        accounts[9],
+        { from: accounts[0] });
 
     }).then (
 
@@ -328,14 +331,17 @@ contract('CappedInvestmentFund', function(accounts) {
       }
 
       /* now lets try to spend more than what is totally available */
-      totalAvailable = 0;
+      totalAvailable = new BigNumber(0);
       sortedOffers.forEach(function(investment) {
-        totalAvailable += Number(web3.fromWei(investment.amount - investment.used), "ether");
+        var thisAvailable = new BigNumber(web3.fromWei(investment.amount - investment.used, "ether"));
+        // console.log(thisAvailable);
+        totalAvailable = totalAvailable.plus(thisAvailable);
       })
-
+      // console.log(totalAvailable);
       console.log('spending more than what is totally available...');
       return investmentFund.spend(
-        web3.toWei(totalAvailable + 1), accounts[9],
+        web3.toWei(totalAvailable + 1),
+        accounts[9],
         { from: accounts[0] });
     }).catch(
 
@@ -344,8 +350,13 @@ contract('CappedInvestmentFund', function(accounts) {
       /* now spend almost all the funds */
       console.log('spending almost all of what is totally available...');
       receiverBalance = web3.eth.getBalance(accounts[9]);
+      // console.log('receiverBalance: ' + receiverBalance.toString());
+
+      // console.log(totalAvailable);
+      var amount = web3.toWei(totalAvailable.minus(0.1));
+      // console.log(amount);
       return investmentFund.spend(
-        web3.toWei(totalAvailable - 0.1),
+        amount,
         accounts[9],
         { from: accounts[0] });
     }).then(
@@ -353,7 +364,13 @@ contract('CappedInvestmentFund', function(accounts) {
     function (txn) {
       var newBalance = web3.eth.getBalance(accounts[9])
       var received = new BigNumber(newBalance - receiverBalance);
-      var sent = new BigNumber(web3.toWei(totalAvailable - 0.1));
+      var sent = new BigNumber(web3.toWei(totalAvailable.minus(0.1)));
+
+      // console.log('totalAvailable:  ' + totalAvailable.toString());
+      // console.log('newBalance:      ' + newBalance.toString());
+      // console.log('received:        ' + received.toString());
+      // console.log('sent:            ' + sent.toString());
+
       assert.equal(sent.cmp(received), 0, "funds sent not received");
 
       console.log('getting sorted used investments...');
@@ -381,7 +398,7 @@ contract('CappedInvestmentFund', function(accounts) {
 
       /* now lets receive some revenue */
       console.log('sending revenue');
-      return investmentFund.sendRevenue({from: accounts[5], value: web3.toWei(revenue_eth[0], "ether")});
+      return investmentFund.receiveRevenue({from: accounts[5], value: web3.toWei(revenue_eth[0], "ether")});
     }).then(
 
     function (txn) {
@@ -394,7 +411,7 @@ contract('CappedInvestmentFund', function(accounts) {
       assert.equal(sortedUsed[0].filled_micros, web3.toWei(revenue_eth[0], "ether")*1000000, "to fill value not expected");
 
       console.log('sending revenue II');
-      return investmentFund.sendRevenue({from: accounts[5], value: web3.toWei(revenue_eth[1], "ether")});
+      return investmentFund.receiveRevenue({from: accounts[5], value: web3.toWei(revenue_eth[1], "ether")});
     }).then(
 
     function (txn) {

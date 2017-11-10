@@ -26,7 +26,6 @@ contract CappedInvestmentFund is Ownable {
 
   uint currToFillKey = 0;
   uint public minInvestment = 100000000000000000; // 0,1 ether by default
-  uint public availableToUse = 0;
 
   /* setter  */
   function setMinInvestment(uint value) public onlyOwner {
@@ -168,13 +167,14 @@ contract CappedInvestmentFund is Ownable {
     investmentOffersOrder.addSorted(listElement, atKey);
   }
 
-  /* start consuming from the offers and add the used investments to the investmentsUsedOrder list.
-  * Accumulates all used funds in the availableToUse counter, which makes them free to be sent.
-  * If an offer is not fully used, it will remain both in the investmentOffersOrder list and in the
-  * investmentsUsedOrder list */
-  function use (uint amount)
-    private
+  /* method to spend funds. They are first marked as "used" by moving it
+  to the UsedInvestments list, and then sent to the sendTo address */
+  function spend (uint amount, address sendTo)
+    public
+    onlyOwner
   {
+
+    /* mark the missing funds as used */
     uint stillToSpend = amount;
 
     if (investmentOffersOrder.getSize() == 0) revert();
@@ -195,12 +195,10 @@ contract CappedInvestmentFund is Ownable {
       if (isEnough) {
         /* if there is more available than needed */
         investment.used += stillToSpend;
-        availableToUse += stillToSpend;
         stillToSpend = 0;
       } else {
         /* if there is less or equal available than needed */
         investment.used += available;
-        availableToUse += available;
         stillToSpend -= available;
       }
 
@@ -227,25 +225,8 @@ contract CappedInvestmentFund is Ownable {
         investment = investments[ix];
       }
     }
-  }
 
-  /* method to spend funds freely. They must be "used" before */
-  function spend (uint amount, address sendTo)
-    public
-    onlyOwner
-  {
-    uint missing = amount - availableToUse;
-    if (missing > 0) {
-      /* mark the missing funds as used */
-      use(missing);
-    }
-
-    /* just a check that the use function worked as expected */
-    missing = amount - availableToUse;
-    if (missing > 0) revert();
-
-    /* the needed funds are marked as used, therefore send them */
-    availableToUse -= amount;
+    /* and transfer them to the requested address */
     sendTo.transfer(amount);
   }
 

@@ -29,25 +29,21 @@
 </template>
 
 <script>
-import { Fund, web3 } from '@/web3-loader.js'
-
-import { getSortedElements } from '@/support.js'
+import { web3 } from '@/web3-loader.js'
 
 export default {
   data () {
     return {
-      fund: null,
-      sortedOffers: []
+    }
+  },
+
+  computed: {
+    sortedOffers () {
+      return this.$store.state.sortedOffers
     }
   },
 
   methods: {
-    updateAll () {
-      getSortedElements(this.fund.getLowestInvestmentOfferKey, this.fund.getInvestmentOfferDataAtKey)
-      .then((sortedElements) => {
-        this.sortedOffers = sortedElements
-      })
-    },
     fromWei (v) {
       return web3.fromWei(v, 'ether').toString()
     },
@@ -57,10 +53,6 @@ export default {
   },
 
   mounted () {
-    Fund.deployed().then((instance) => {
-      this.fund = instance
-      this.updateAll()
-    })
   }
 }
 </script>

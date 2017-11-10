@@ -62,15 +62,13 @@
 </template>
 
 <script>
-import { Fund, web3 } from '@/web3-loader.js'
+import { web3 } from '@/web3-loader.js'
 
 export default {
   name: 'home',
 
   data () {
     return {
-      fund: null,
-      accounts: [],
       from: '',
       amount: 0,
       bonusMultiplier: 1,
@@ -83,51 +81,37 @@ export default {
   computed: {
     paybackAmount () {
       return this.amount * this.bonusMultiplier
+    },
+    accounts () {
+      return this.$store.state.accounts
     }
   },
 
   methods: {
-    updateAll () {
-      web3.eth.getAccountsPromise().then((accounts) => {
-        this.accounts = accounts
-      })
-    },
     sendInvestment () {
-      var ok = true
+      var error = false
+      error = this.amount <= 0 || error
+      error = this.from === '' || error
 
-      if (this.amount <= 0) {
-        ok = false
-      }
+      if (error) return
 
-      if (this.from === '') {
-        ok = false
-      }
-
-      if (ok) {
-        this.sending = true
-        this.success = false
-        this.fund.invest(this.bonusMultiplier * 1000000, 0, {
-          from: this.from,
-          value: web3.toWei(this.amount),
-          gas: 500000
-        }).then((txn) => {
-          this.sending = false
-          this.success = true
-          this.sent = {
-            amount: this.amount,
-            bonusMultiplier: this.bonusMultiplier
-          }
-          this.amount = 0
-        })
-      }
+      this.sending = true
+      this.success = false
+      this.$store.state.fundInstance().invest(this.bonusMultiplier * 1000000, 0, {
+        from: this.from,
+        value: web3.toWei(this.amount),
+        gas: 500000
+      }).then((txn) => {
+        this.sending = false
+        this.success = true
+        this.sent = {
+          amount: this.amount,
+          bonusMultiplier: this.bonusMultiplier
+        }
+        this.amount = 0
+        this.$store.dispatch('updateSortedOffers')
+      })
     }
-  },
-
-  mounted () {
-    Fund.deployed().then((instance) => {
-      this.fund = instance
-      this.updateAll()
-    })
   }
 }
 </script>

@@ -1,3 +1,5 @@
+const BigNumber = require('bignumber.js')
+
 const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
   var array = []
   return new Promise(function (resolve, reject) {
@@ -22,11 +24,11 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
       function (res) {
         var element = {
           investor: res[0],
-          amount: res[1],
-          multiplier_micro: res[2],
-          used: res[3],
-          filled_micros: res[4],
-          paid_micros: res[5]
+          amount: new BigNumber(res[1]),
+          multiplier_micro: new BigNumber(res[2]),
+          used: new BigNumber(res[3]),
+          filled_micros: new BigNumber(res[4]),
+          paid_micros: new BigNumber(res[5])
         }
 
         array.push(element)

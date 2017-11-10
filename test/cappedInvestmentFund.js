@@ -220,10 +220,15 @@ contract('CappedInvestmentFund', function(accounts) {
       /* spend another 80% of the first investment */
       console.log('spending another 80% of first investment...');
       receiverBalance = web3.eth.getBalance(accounts[9]);
+      console.log(receiverBalance);
       return investmentFund.spend(
         web3.toWei(investmentsSorted[0].amount_eth*0.8),
-        accounts[0],
+        accounts[9],
         { from: accounts[0] });
+    }).catch(function () {
+
+      console.log('error spending another 80%');
+
     }).then(
 
     function(txn) {
@@ -235,10 +240,6 @@ contract('CappedInvestmentFund', function(accounts) {
 
       console.log('getting sorted used investments...');
       return getSortedElements(investmentFund.getLowestInvestmentUsedKey, investmentFund.getInvestmentUsedDataAtKey);
-    }).catch(function () {
-
-      console.log('error spending another 80%');
-
     }).then(
 
     function(usedOffers) {

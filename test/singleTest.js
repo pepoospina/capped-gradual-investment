@@ -146,10 +146,8 @@ contract('CappedInvestmentFund', function(accounts) {
     function(txn) {
 
       console.log('getting sorted elements...');
-      return getSortedElements(
-        investmentFund.getLowestInvestmentOfferKey,
-        investmentFund.getInvestmentOfferDataAtKey);
-
+      return investmentFund.getLowestInvestmentOfferKey.call();
+      
     }).catch(function(err) {
 
       console.log("error getting sorted elements")
@@ -157,10 +155,15 @@ contract('CappedInvestmentFund', function(accounts) {
 
     }).then(
 
-    function(sortedOffers) {
+    function(key) {
       /* check the order is correct */
-      console.log(sortedOffers);
+      console.log('key: ' + key);
+      return investmentFund.getInvestmentOfferDataAtKey.call(key);
 
+    }).then(
+
+    function(res) {
+      console.log(res);
     });
   });
 });

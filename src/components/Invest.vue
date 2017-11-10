@@ -109,7 +109,7 @@ export default {
           bonusMultiplier: this.bonusMultiplier
         }
         this.amount = 0
-        this.$store.dispatch('updateSortedOffers')
+        this.$store.dispatch('updateOffers')
       })
     }
   }

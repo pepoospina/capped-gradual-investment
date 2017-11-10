@@ -13,7 +13,8 @@ export const store = new Vuex.Store({
     fundInstance: null,
     fundOwner: '',
     accounts: [],
-    sortedOffers: []
+    sortedOffers: [],
+    sortedUsed: []
   },
 
   getters: {
@@ -38,6 +39,9 @@ export const store = new Vuex.Store({
     },
     setSortedOffers: (state, payload) => {
       state.sortedOffers = payload
+    },
+    setSortedUsed: (state, payload) => {
+      state.sortedUsed = payload
     }
   },
 
@@ -47,7 +51,7 @@ export const store = new Vuex.Store({
         /* uses a function to prevent vue reactivity to call all getters */
         context.commit('setFundInstance', function () { return instance })
         context.dispatch('updateFundOwner')
-        context.dispatch('updateSortedOffers')
+        context.dispatch('updateOffers')
       })
     },
 
@@ -66,12 +70,27 @@ export const store = new Vuex.Store({
       })
     },
 
+    updateOffers: (context) => {
+      context.dispatch('updateSortedOffers')
+      context.dispatch('updateSortedUsed')
+    },
+
     updateSortedOffers: (context) => {
       if (context.state.fundInstance !== null) {
         var instance = context.state.fundInstance()
         getSortedElements(instance.getLowestInvestmentOfferKey, instance.getInvestmentOfferDataAtKey)
         .then((sortedElements) => {
           context.commit('setSortedOffers', sortedElements)
+        })
+      }
+    },
+
+    updateSortedUsed: (context) => {
+      if (context.state.fundInstance !== null) {
+        var instance = context.state.fundInstance()
+        getSortedElements(instance.getLowestInvestmentUsedKey, instance.getInvestmentUsedDataAtKey)
+        .then((sortedElements) => {
+          context.commit('setSortedUsed', sortedElements)
         })
       }
     }

@@ -8,7 +8,7 @@ contract CappedInvestmentFund is Ownable {
   struct Investment {
     address investor;
     uint amount;
-    uint multiplier_micro;
+    uint multiplier_micros;
     uint used;
     uint filled_micros;
     uint paid_micros;
@@ -27,6 +27,16 @@ contract CappedInvestmentFund is Ownable {
   uint currToFillKey = 0;
   uint public minInvestment = 100000000000000000; // 0,1 ether by default
   uint public superavit = 0;
+
+
+  /* Events*/
+  event LogInvestmentOfferReceived(address investor, uint amount, uint multiplier_micros);
+  event LogInvestmentOfferUsed(address investor, uint amount, uint multiplier_micros);
+  event LogFundsSent(address to, uint amount);
+  event LogReceivedRevenue(address from, uint amount);
+  event LogSuperavitIncreased(uint superavit, uint increaseAmount);
+  event LogInvestmentOfferFilled(address investor, uint amount, uint multiplier_micros, uint filled_micro);
+  event LogInvestmentOfferPaid(address investor, uint amount, uint multiplier_micros, uint filled_micro, uint paid_micro);
 
   /* setter  */
   function setMinInvestment(uint value) public onlyOwner {
@@ -71,11 +81,11 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentOfferDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micros, uint used, uint filled_micros, uint paid_micros, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentOffersOrder.get(key);
-      (investor, amount, multiplier_micro, used, filled_micros, paid_micros, nextKey) =
+      (investor, amount, multiplier_micros, used, filled_micros, paid_micros, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
@@ -86,11 +96,11 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentUsedDataAtKey (uint key)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKey)
+    returns (address investor, uint amount, uint multiplier_micros, uint used, uint filled_micros, uint paid_micros, uint nextKey)
   {
     if (key > 0) {
       SortedListManager.ListElement memory element = investmentsUsedOrder.get(key);
-      (investor, amount, multiplier_micro, used, filled_micros, paid_micros, nextKey) =
+      (investor, amount, multiplier_micros, used, filled_micros, paid_micros, nextKey) =
         getInvestmentDataAtIx(element.extKey, element.next);
       return;
     } else {
@@ -101,13 +111,13 @@ contract CappedInvestmentFund is Ownable {
   function getInvestmentDataAtIx (uint ix, uint nextKey)
     public
     constant
-    returns (address investor, uint amount, uint multiplier_micro, uint used, uint filled_micros, uint paid_micros, uint nextKeyOut)
+    returns (address investor, uint amount, uint multiplier_micros, uint used, uint filled_micros, uint paid_micros, uint nextKeyOut)
   {
     Investment memory investment = investments[ix];
 
     return (investment.investor,
             investment.amount,
-            investment.multiplier_micro,
+            investment.multiplier_micros,
             investment.used,
             investment.filled_micros,
             investment.paid_micros,
@@ -144,7 +154,7 @@ contract CappedInvestmentFund is Ownable {
   *  If this is the case, the gas cosumed is predictable as the insertion process does not
   *  includes searching for the correct insertion point.
   **/
-  function invest(uint multiplier_micro, uint atKey)
+  function invest(uint multiplier_micros, uint atKey)
     payable
     public
     returns(uint ix)
@@ -156,16 +166,18 @@ contract CappedInvestmentFund is Ownable {
 
     newInvestment.investor = msg.sender;
     newInvestment.amount = msg.value;
-    newInvestment.multiplier_micro = multiplier_micro;
+    newInvestment.multiplier_micros = multiplier_micros;
 
     investments.push(newInvestment);
     ix = investments.length;
 
     SortedListManager.ListElement memory listElement;
     listElement.extKey = ix - 1;
-    listElement.value = multiplier_micro;
+    listElement.value = multiplier_micros;
 
     investmentOffersOrder.addSorted(listElement, atKey);
+
+    LogInvestmentOfferReceived(newInvestment.investor, newInvestment.amount, newInvestment.multiplier_micros);
   }
 
   /* method to spend funds. They are first marked as "used" by moving it
@@ -196,6 +208,8 @@ contract CappedInvestmentFund is Ownable {
 
     /* and then transfer them funds */
     sendTo.transfer(amount);
+
+    LogFundsSent(sendTo, amount);
   }
 
   function use (uint amount)
@@ -233,13 +247,17 @@ contract CappedInvestmentFund is Ownable {
         /* not yet added */
         SortedListManager.ListElement memory listElement;
         listElement.extKey = ix;
-        listElement.value = investment.multiplier_micro;
+        listElement.value = investment.multiplier_micros;
         investmentsUsedOrder.push(listElement);
       }
 
       if (investment.used >= investment.amount) {
-        /* remove the element from the offer list because it has been fully used */
+        /* remove the investment (it was the first in the list) from the offer
+        list because it has been fully used */
         investmentOffersOrder.popFirst();
+
+        /* log is within the while loop, one per each fully used investment offer */
+        LogInvestmentOfferUsed(investment.investor, investment.amount, investment.multiplier_micros);
       }
 
       if (!isEnough) {
@@ -251,6 +269,7 @@ contract CappedInvestmentFund is Ownable {
         investment = investments[ix];
       }
     }
+
   }
 
   function receiveRevenue ()
@@ -261,10 +280,13 @@ contract CappedInvestmentFund is Ownable {
     /* check they sent something */
     if (msg.value == 0) revert();
 
+    LogReceivedRevenue(msg.sender, msg.value);
+
     /* if there are not used investments, store the
     revenue as superavit */
     if (investmentsUsedOrder.getSize() == 0) {
       superavit += msg.value;
+      LogSuperavitIncreased(superavit, msg.value);
       return;
     }
     /* else */
@@ -279,7 +301,7 @@ contract CappedInvestmentFund is Ownable {
     Investment storage investment = investments[currentElement.extKey];
 
     while (stillToFill_micros > 0) {
-      uint thisDebt_micros = investment.used*investment.multiplier_micro - investment.filled_micros;
+      uint thisDebt_micros = investment.used*investment.multiplier_micros - investment.filled_micros;
       bool justEnoughForThis = false;
 
       if (thisDebt_micros >= stillToFill_micros) {
@@ -297,6 +319,8 @@ contract CappedInvestmentFund is Ownable {
            fill other investments */
         investment.filled_micros += thisDebt_micros;
         stillToFill_micros -= thisDebt_micros;
+
+        LogInvestmentOfferFilled(investment.investor, investment.amount, investment.multiplier_micros, investment.filled_micros);
 
         /* go and fill the next investment */
         if (currentElement.next > 0) {
@@ -332,6 +356,8 @@ contract CappedInvestmentFund is Ownable {
       investment.paid_micros += toPay_micros;
       uint toPay_wei = investment.paid_micros/1000000;
       sendTo.transfer(toPay_wei);
+
+      LogInvestmentOfferPaid(investment.investor, investment.amount, investment.multiplier_micros, investment.filled_micros, investment.paid_micros);
     }
   }
 

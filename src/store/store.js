@@ -15,7 +15,8 @@ export const store = new Vuex.Store({
     accounts: [],
     sortedOffers: [],
     sortedUsed: [],
-    superavit: 0
+    superavit: 0,
+    events: []
   },
 
   getters: {
@@ -46,15 +47,99 @@ export const store = new Vuex.Store({
     },
     setSuperavit: (state, payload) => {
       state.superavit = payload
+    },
+    pushEvent: (state, payload) => {
+      state.events.push(payload)
     }
   },
 
   actions: {
     updateFundInstance: (context) => {
       Fund.deployed().then((instance) => {
-        /* uses a function to prevent vue reactivity to call all getters */
         console.log('fund deployed at:' + instance.address)
+
+        /* register events */
+        context.commit('setLoading', true)
+
+        instance.LogInvestmentOfferReceived({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogInvestmentOfferReceived')
+
+          var eventString = event.args.investor + ' offered an investment of ' +
+            web3.fromWei(event.args.amount).toString() +
+            ' ether with a ' + (event.args.multiplier_micros / 1000000).toString() + ' multiplier'
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        instance.LogInvestmentOfferUsed({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogInvestmentOfferUsed')
+
+          var eventString = 'investment from ' + event.args.investor + ' of ' +
+            web3.fromWei(event.args.amount).toString() +
+            ' ether with a ' + (event.args.multiplier_micros / 1000000).toString() + ' multiplier was used'
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        instance.LogFundsSent({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogFundsSent')
+
+          var eventString = '"The Fund" sent ' + web3.fromWei(event.args.amount).toString() + ' ether to ' + event.args.to
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        instance.LogSuperavitIncreased({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogSuperavitIncreased')
+
+          var eventString = 'superavit increased by ' + web3.fromWei(event.args.increaseAmount).toString() +
+            ' ether up to ' + web3.fromWei(event.args.superavit).toString() + ' ether'
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        instance.LogInvestmentOfferFilled({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogInvestmentOfferFilled')
+
+          var eventString = 'investment from ' + event.args.investor + ' of ' +
+            web3.fromWei(event.args.amount).toString() + ' ether with a ' +
+            (event.args.multiplier_micros / 1000000).toString() + ' multiplier was filled with revenue'
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        instance.LogInvestmentOfferPaid({}, { fromBlock: 0 })
+        .watch((err, event) => {
+          console.log(err)
+          console.log('LogInvestmentOfferPaid')
+
+          var eventString = 'investment from ' + event.args.investor + ' of ' +
+            web3.fromWei(event.args.amount).toString() + ' ether with a ' +
+            (event.args.multiplier_micros / 1000000).toString() + ' multiplier was paidback to the investor'
+
+          context.commit('pushEvent', { block: event.blockNumber, eventString: eventString })
+          context.dispatch('updateOffers')
+        })
+
+        /* uses a function to prevent vue reactivity to call all getters */
         context.commit('setFundInstance', function () { return instance })
+
+        /* dispatch update data */
         context.dispatch('updateFundOwner')
         context.dispatch('updateOffers')
       })
@@ -74,7 +159,7 @@ export const store = new Vuex.Store({
       if (context.state.fundInstance !== null) {
         var instance = context.state.fundInstance()
         instance.superavit.call().then((superavit) => {
-          console.log('superavit:' + superavit)
+          // console.log('superavit:' + superavit)
           context.commit('setSuperavit', superavit)
         })
       }

@@ -59,6 +59,26 @@
       </div>
 
     </div>
+
+    <hr>
+    <div class="w3-row-padding w3-container">
+      <h4>Events: </h4>
+      <table class="w3-table-all w3-card-2">
+        <thead>
+          <tr>
+            <th class="w3-center">Block #</th>
+            <th>Event</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="event in eventsSorted">
+            <td class="w3-center">{{ event.block }}</td>
+            <td>{{ event.eventString }}</td>
+          </tr>
+        </tbody>
+
+      </table>
+    </div>
   </div>
 </template>
 
@@ -78,6 +98,16 @@ export default {
     },
     sortedUsed () {
       return this.$store.state.sortedUsed
+    },
+    events () {
+      return this.$store.state.events
+    },
+    eventsSorted () {
+      return JSON.parse(JSON.stringify(this.events.sort((e1, e2) => {
+        if (e1.blockNumber < e2.blockNumber) return -1
+        if (e1.blockNumber > e2.blockNumber) return 1
+        return 0
+      })))
     }
   },
 

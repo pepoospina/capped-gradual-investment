@@ -26,6 +26,7 @@ contract CappedInvestmentFund is Ownable {
 
   uint currToFillKey = 0;
   uint public minInvestment = 100000000000000000; // 0,1 ether by default
+  uint public superavit = 0;
 
   /* setter  */
   function setMinInvestment(uint value) public onlyOwner {
@@ -174,6 +175,16 @@ contract CappedInvestmentFund is Ownable {
     onlyOwner
   {
 
+    /* amount coverered with supervit */
+    uint coverted = 0;
+    if (superavit > 0) {
+      if (superavit > amount) {
+        covered = amount;
+      } else {
+        covered = superavit;
+      }
+    }
+
     /* mark the missing funds as used */
     uint stillToSpend = amount;
 
@@ -234,9 +245,15 @@ contract CappedInvestmentFund is Ownable {
     payable
     public
   {
-    uint stillToFill_micros = msg.value*1000000;
+    /* if there are not used investments, store the
+    revenue as superavit */
+    if (investmentsUsedOrder.getSize() == 0) {
+      superavit += msg.value;
+      return;
+    };
+    /* else */
 
-    if (investmentsUsedOrder.getSize() == 0) revert();
+    uint stillToFill_micros = msg.value*1000000;
 
     if (currToFillKey == 0) {
       currToFillKey = investmentsUsedOrder.getFirstKey();
@@ -272,12 +289,12 @@ contract CappedInvestmentFund is Ownable {
           investment = investments[currentElement.extKey];
         }  else {
           /* eventhough there are more funds, no investments are to be fullfiled
-            funds are then sink wihtin the contract. */
+            funds are converted into superavit. */
+          superavit += stillToFill_micros / 1000000;
           stillToFill_micros = 0;
         }
       }
     }
-
   }
 
   /* the key is the key on the usedInvestements list,

@@ -7,7 +7,7 @@
           <h4>Offers</h4>
         </div>
         <div class="w3-row">
-          <table class="w3-table-all w3-centered">
+          <table class="w3-table-all w3-card-2 w3-centered">
             <thead>
               <tr>
                 <th>Investor</th>
@@ -31,12 +31,14 @@
           <h4>Used</h4>
         </div>
         <div class="w3-row">
-          <table class="w3-table-all w3-centered">
+          <table class="w3-table-all w3-card-2 w3-centered">
             <thead>
               <tr>
                 <th>Investor</th>
                 <th>Offered</th>
+                <th>Used</th>
                 <th>Bonus X</th>
+                <th>To be paid</th>
                 <th>Filled</th>
                 <th>Paid</th>
               </tr>
@@ -45,7 +47,9 @@
               <tr v-for="offer in sortedUsed">
                 <td>{{ offer.investor.slice(0, 8) }}</td>
                 <td>{{ fromWei(offer.amount) }}</td>
+                <td>{{ fromWei(offer.used).toString() }}</td>
                 <td>{{ fromMicros(offer.multiplier_micro).toString() }}</td>
+                <td>{{ fromWei(toBePaid(offer)).toString() }}</td>
                 <td>{{ fromWei(fromMicros(offer.filled_micros)).toString() }}</td>
                 <td>{{ fromWei(fromMicros(offer.paid_micros)).toString() }}</td>
               </tr>
@@ -83,6 +87,9 @@ export default {
     },
     fromMicros (v) {
       return v.div(1000000)
+    },
+    toBePaid (offer) {
+      return offer.used.times(offer.multiplier_micro).div(1000000)
     }
   },
 

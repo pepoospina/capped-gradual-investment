@@ -5,8 +5,8 @@ const getSortedElements = function (getLowestKeyMethod, getElementAtKeyMethod) {
   return new Promise(function (resolve, reject) {
     getLowestKeyMethod.call().then(
       function (key) {
+        // console.log('first key: ' + key)
         if (key > 0) {
-          // console.log('first key: ' + key)
           getSortedElementsRec(getElementAtKeyMethod, key, array).then(
             function (array) {
               resolve(array)
@@ -28,7 +28,8 @@ const getSortedElementsRec = function (getElementAtKeyMethod, key, array) {
           multiplier_micro: new BigNumber(res[2]),
           used: new BigNumber(res[3]),
           filled_micros: new BigNumber(res[4]),
-          paid_micros: new BigNumber(res[5])
+          paid_micros: new BigNumber(res[5]),
+          key: key
         }
 
         array.push(element)

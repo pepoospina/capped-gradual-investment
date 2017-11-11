@@ -65,7 +65,7 @@
 import { web3 } from '@/web3-loader.js'
 
 export default {
-  name: 'home',
+  name: 'invest',
 
   data () {
     return {
@@ -102,6 +102,8 @@ export default {
         value: web3.toWei(this.amount),
         gas: 500000
       }).then((txn) => {
+        console.log('invested')
+        console.log(txn)
         this.sending = false
         this.success = true
         this.sent = {

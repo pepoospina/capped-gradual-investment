@@ -161,6 +161,7 @@ export default {
           gas: 500000
         }).then((txn) => {
           console.log('spent')
+          console.log(txn)
           this.$store.dispatch('updateOffers')
           this.updateBalanceTo()
         })
@@ -180,6 +181,7 @@ export default {
           gas: 500000
         }).then((txn) => {
           console.log('received')
+          console.log(txn)
           this.$store.dispatch('updateOffers')
           this.updateBalanceFrom()
         })
@@ -207,5 +209,9 @@ export default {
 }
 </script>
 
-<style lang="css">
+<style scoped>
+
+button {
+  width: 200px;
+}
 </style>

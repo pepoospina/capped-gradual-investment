@@ -49,6 +49,7 @@ export const store = new Vuex.Store({
     updateFundInstance: (context) => {
       Fund.deployed().then((instance) => {
         /* uses a function to prevent vue reactivity to call all getters */
+        console.log('fund deployed at:' + instance.address)
         context.commit('setFundInstance', function () { return instance })
         context.dispatch('updateFundOwner')
         context.dispatch('updateOffers')
@@ -59,6 +60,7 @@ export const store = new Vuex.Store({
       if (context.state.fundInstance !== null) {
         var instance = context.state.fundInstance()
         instance.owner.call().then((owner) => {
+          console.log('fund owner:' + owner)
           context.commit('setFundOwner', owner)
         })
       }

@@ -4,7 +4,7 @@
       <h1>Investment Fund</h1>
     </div>
     <div class="w3-row">
-      <div class="w3-col m4">
+      <div class="w3-col m3">
         <router-link :to="{name: 'Overview'}">
           <button class="w3-button"
             :class="{ 'w3-blue': isOverview, 'w3-gray': !isOverview }"
@@ -13,7 +13,7 @@
           </button>
         </router-link>
       </div>
-      <div class="w3-col m4">
+      <div class="w3-col m3">
         <router-link :to="{name: 'Invest'}">
           <button class="w3-button"
             :class="{ 'w3-blue': isInvest, 'w3-gray': !isInvest }"
@@ -22,12 +22,21 @@
           </button>
         </router-link>
       </div>
-      <div class="w3-col m4">
+      <div class="w3-col m3">
         <router-link :to="{name: 'Admin'}">
           <button class="w3-button"
             :class="{ 'w3-blue': isAdmin, 'w3-gray': !isAdmin }"
             type="button" name="button">
             Admin
+          </button>
+        </router-link>
+      </div>
+      <div class="w3-col m3">
+        <router-link :to="{name: 'Withdraw'}">
+          <button class="w3-button"
+            :class="{ 'w3-blue': isWithdraw, 'w3-gray': !isWithdraw }"
+            type="button" name="button">
+            Withdraw
           </button>
         </router-link>
       </div>
@@ -66,6 +75,9 @@ export default {
     },
     isAdmin () {
       return this.$route.name === 'Admin'
+    },
+    isWithdraw () {
+      return this.$route.name === 'Withdraw'
     }
   },
 

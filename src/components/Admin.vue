@@ -6,7 +6,16 @@
 
     <div class="w3-row-padding">
       <div class="w3-col m3 w3-padding">
-        <label for=""><b>Funds available:</b></label>
+        <label for=""><b>Superavit:</b></label>
+      </div>
+      <div class="w3-col m9">
+        <input v-model="superavit" class="w3-input" type="number" disabled>
+      </div>
+    </div>
+
+    <div class="w3-row-padding w3-margin-top">
+      <div class="w3-col m3 w3-padding">
+        <label for=""><b>In offers:</b></label>
       </div>
       <div class="w3-col m9">
         <input v-model="available" class="w3-input" type="number" disabled>
@@ -115,6 +124,9 @@ export default {
   },
 
   computed: {
+    superavit () {
+      return web3.fromWei(this.$store.state.superavit).toString()
+    },
     available () {
       return web3.fromWei(this.$store.getters.totalOfferedWei, 'ether').toString()
     },

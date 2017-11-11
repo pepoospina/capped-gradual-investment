@@ -175,20 +175,35 @@ contract CappedInvestmentFund is Ownable {
     onlyOwner
   {
 
-    /* amount coverered with supervit */
-    uint coverted = 0;
-    if (superavit > 0) {
-      if (superavit > amount) {
-        covered = amount;
-      } else {
-        covered = superavit;
-      }
-    }
+    /* just valid transfers */
+    if (amount <= 0) revert();
+    /* valid send to */
+    if (sendTo == address(0)) revert();
+
+    /* amount coverered with superavit */
+    uint covered = 0;
+
+    /* min between superavit and amount is what is covered without
+    using investment offers */
+    covered = superavit > amount ? amount : superavit;
+    superavit -= covered;
 
     /* mark the missing funds as used */
-    uint stillToSpend = amount;
+    uint stillToSpend = amount - covered;
 
+    /* if funds need to be used from the investment offers, register it */
+    if (stillToSpend > 0) use(stillToSpend);
+
+    /* and then transfer them funds */
+    sendTo.transfer(amount);
+  }
+
+  function use (uint amount)
+    private
+  {
     if (investmentOffersOrder.getSize() == 0) revert();
+
+    uint stillToSpend = amount;
 
     SortedListManager.ListElement memory elementInOffers = investmentOffersOrder.getFirst();
     uint ix = elementInOffers.extKey;
@@ -236,21 +251,22 @@ contract CappedInvestmentFund is Ownable {
         investment = investments[ix];
       }
     }
-
-    /* and transfer them to the requested address */
-    sendTo.transfer(amount);
   }
 
   function receiveRevenue ()
     payable
     public
   {
+
+    /* check they sent something */
+    if (msg.value == 0) revert();
+
     /* if there are not used investments, store the
     revenue as superavit */
     if (investmentsUsedOrder.getSize() == 0) {
       superavit += msg.value;
       return;
-    };
+    }
     /* else */
 
     uint stillToFill_micros = msg.value*1000000;

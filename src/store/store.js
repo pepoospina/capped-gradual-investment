@@ -14,7 +14,8 @@ export const store = new Vuex.Store({
     fundOwner: '',
     accounts: [],
     sortedOffers: [],
-    sortedUsed: []
+    sortedUsed: [],
+    superavit: 0
   },
 
   getters: {
@@ -42,6 +43,9 @@ export const store = new Vuex.Store({
     },
     setSortedUsed: (state, payload) => {
       state.sortedUsed = payload
+    },
+    setSuperavit: (state, payload) => {
+      state.superavit = payload
     }
   },
 
@@ -66,6 +70,16 @@ export const store = new Vuex.Store({
       }
     },
 
+    updateSuperavit: (context) => {
+      if (context.state.fundInstance !== null) {
+        var instance = context.state.fundInstance()
+        instance.superavit.call().then((superavit) => {
+          console.log('superavit:' + superavit)
+          context.commit('setSuperavit', superavit)
+        })
+      }
+    },
+
     updateAccounts: (context) => {
       web3.eth.getAccountsPromise().then((accounts) => {
         context.commit('setAccounts', accounts)
@@ -75,6 +89,7 @@ export const store = new Vuex.Store({
     updateOffers: (context) => {
       context.dispatch('updateSortedOffers')
       context.dispatch('updateSortedUsed')
+      context.dispatch('updateSuperavit')
     },
 
     updateSortedOffers: (context) => {
